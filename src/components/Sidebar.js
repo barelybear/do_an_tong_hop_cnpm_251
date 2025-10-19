@@ -1,0 +1,80 @@
+import React, { useState } from 'react';
+import ChatList from './ChatList';
+import FriendList from './FriendList';
+import RequestList from './RequestList';
+import CreateGroupModal from './CreateGroupModal';
+import '../styles/Sidebar.css';
+
+function Sidebar({ currentUser, selectedChat, onSelectChat, activeTab, onTabChange }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
+
+  return (
+    <div className="sidebar">
+      <div className="sidebar-header">
+        <h1 className="sidebar-title">Chats</h1>
+        <div className="sidebar-actions">
+          <button className="icon-btn" onClick={() => setShowCreateGroup(true)} title="Tạo nhóm mới">
+            <span>+</span>
+          </button>
+          <button className="icon-btn" title="Tài khoản">
+            <span>👤</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="sidebar-tabs">
+        <button
+          className={`tab ${activeTab === 'chats' ? 'active' : ''}`}
+          onClick={() => onTabChange('chats')}
+        >
+          Trò chuyện
+        </button>
+        <button
+          className={`tab ${activeTab === 'friends' ? 'active' : ''}`}
+          onClick={() => onTabChange('friends')}
+        >
+          Bạn bè
+        </button>
+        <button
+          className={`tab ${activeTab === 'requests' ? 'active' : ''}`}
+          onClick={() => onTabChange('requests')}
+        >
+          Lời mới
+        </button>
+      </div>
+
+      <div className="search-bar">
+        <input
+          type="text"
+          placeholder="Tìm kiếm..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
+
+      <div className="sidebar-content">
+        {activeTab === 'chats' && (
+          <ChatList
+            selectedChat={selectedChat}
+            onSelectChat={onSelectChat}
+            searchQuery={searchQuery}
+          />
+        )}
+        {activeTab === 'friends' && (
+          <FriendList searchQuery={searchQuery} />
+        )}
+        {activeTab === 'requests' && (
+          <RequestList />
+        )}
+      </div>
+
+      {showCreateGroup && (
+        <CreateGroupModal onClose={() => setShowCreateGroup(false)} />
+      )}
+    </div>
+  );
+}
+
+export default Sidebar;
+
