@@ -8,7 +8,11 @@
     "dev": "webpack --mode development --watch",
     "build": "webpack --mode production"
   },
-  "keywords": ["electron", "react", "chat"],
+  "keywords": [
+    "electron",
+    "react",
+    "chat"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
@@ -16,7 +20,7 @@
     "@babel/preset-react": "^7.22.0",
     "babel-loader": "^9.1.3",
     "css-loader": "^6.8.1",
-    "electron": "^27.0.0",
+    "electron": "^27.3.11",
     "html-webpack-plugin": "^5.5.3",
     "style-loader": "^3.3.3",
     "webpack": "^5.89.0",
@@ -26,6 +30,13 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.18.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/barelybear/do_an_tong_hop_cnpm_251.git"
+  },
+  "bugs": {
+    "url": "https://github.com/barelybear/do_an_tong_hop_cnpm_251/issues"
+  },
+  "homepage": "https://github.com/barelybear/do_an_tong_hop_cnpm_251#readme"
 }
-

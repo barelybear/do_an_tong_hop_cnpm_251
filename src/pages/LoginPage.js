@@ -1,7 +1,29 @@
 import React, { useState } from 'react';
 import '../styles/LoginPage.css';
 
-function LoginPage({ onLogin }) {
+import { ca } from 'google-translate-api/languages';
+
+async function callPython({ function_name, args }) {
+  console.log("🔹 About to call Python backend...");
+  
+  try {
+    const res = await fetch("http://127.0.0.1:5000/api/process", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ function_name, args })
+    });
+    console.log("🔹 Fetch finished, got response:", res);
+    
+    const data = await res.json();
+    console.log("Python output:", data.output);
+    return data;
+  } catch (err) {
+    console.error("❌ Fetch failed:", err);
+  }
+}
+
+
+async function LoginPage({ onLogin }) {
   const [isRegister, setIsRegister] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
@@ -17,7 +39,7 @@ function LoginPage({ onLogin }) {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (isRegister) {
@@ -30,22 +52,23 @@ function LoginPage({ onLogin }) {
         alert('Vui lòng điền đầy đủ thông tin.');
         return;
       }
-      // Mock registration success
+
+      const data = await callPython({function_name: "on_signup", args: [formData.username, formData.password, formData.gmail]});
+      if (!data.output) {
+        alert('Đăng ký thất bại. Vui lòng thử lại.');
+        return;
+      }
+      
       alert('Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.');
       setIsRegister(false);
     } else {
-      // Mock login
-      if (formData.username && formData.password) {
-        onLogin({
-          id: 'user123',
-          username: formData.username,
-          gmail: 'user@gmail.com',
-          avatar: 'https://via.placeholder.com/150',
-          status: 'online'
-        });
-      } else {
-        alert('Sai tên đăng nhập hoặc mật khẩu.');
+      const data = await callPython({function_name: "on_login", args: [formData.username, formData.password]});
+      if (!data.output) {
+        alert('Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
+        return;
       }
+      alert('Đăng nhập thành công! Xin chào ' + formData.username);
+      onLogin(formData.username);
     }
   };
 
