@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App Prototype</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f2f5;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        /* Auth Screens */
+        .auth-screen {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .auth-box {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 400px;
+            max-width: 90%;
+        }
+
+        .auth-box h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .auth-box p {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            margin-top: 10px;
+        }
+
+        .link {
+            text-align: center;
+            margin-top: 20px;
+            color: #667eea;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 320px;
+            background: white;
+            border-right: 1px solid #e1e8ed;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #e1e8ed;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sidebar-header h2 {
+            font-size: 24px;
+            color: #333;
+        }
+
+        .header-icons {
+            display: flex;
+            gap: 15px;
+        }
+
+        .icon-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #f0f2f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .icon-btn:hover {
+            background: #e4e6eb;
+        }
+
+        .search-box {
+            padding: 15px 20px;
+            border-bottom: 1px solid #e1e8ed;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 15px;
+            border: none;
+            background: #f0f2f5;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .chat-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .chat-item {
+            padding: 15px 20px;
+            display: flex;
+            gap: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f0f2f5;
+        }
+
+        .chat-item:hover {
+            background: #f7f9fa;
+        }
+
+        .chat-item.active {
+            background: #e7f3ff;
+        }
+
+        .avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .chat-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .chat-info-top {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .chat-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 15px;
+        }
+
+        .chat-time {
+            font-size: 12px;
+            color: #8e8e93;
+        }
+
+        .chat-preview {
+            color: #8e8e93;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Main Chat Area */
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #f7f9fa;
+        }
+
+        .chat-header {
+            padding: 15px 25px;
+            background: white;
+            border-bottom: 1px solid #e1e8ed;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-status {
+            color: #8e8e93;
+            font-size: 13px;
+            margin-top: 2px;
+        }
+
+        .online-status {
+            color: #4cd964;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            display: flex;
+            gap: 10px;
+            max-width: 70%;
+            animation: messageSlide 0.3s ease;
+        }
+
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.sent {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .message-bubble {
+            padding: 10px 15px;
+            border-radius: 18px;
+            background: white;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .message.sent .message-bubble {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .message-text {
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: #8e8e93;
+            margin-top: 5px;
+        }
+
+        .message.sent .message-time {
+            color: rgba(255,255,255,0.8);
+        }
+
+        .chat-input-area {
+            padding: 20px 25px;
+            background: white;
+            border-top: 1px solid #e1e8ed;
+        }
+
+        .chat-input-box {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        .chat-input-box input {
+            flex: 1;
+            padding: 12px 18px;
+            border: 2px solid #e1e8ed;
+            border-radius: 24px;
+            font-size: 14px;
+            resize: none;
+            transition: border-color 0.2s;
+        }
+
+        .chat-input-box input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .send-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* Profile Panel */
+        .profile-panel {
+            width: 350px;
+            background: white;
+            border-left: 1px solid #e1e8ed;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .profile-header {
+            padding: 30px 25px;
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 15px;
+        }
+
+        .profile-name {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .profile-bio {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .profile-section {
+            padding: 20px 25px;
+            border-bottom: 1px solid #e1e8ed;
+        }
+
+        .profile-section h3 {
+            font-size: 14px;
+            color: #8e8e93;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .profile-option {
+            padding: 12px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .profile-option:hover {
+            color: #667eea;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 5px;
+            padding: 0 20px;
+            border-bottom: 1px solid #e1e8ed;
+        }
+
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            color: #8e8e93;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: #333;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #8e8e93;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            width: 400px;
+            max-width: 90%;
+        }
+
+        .modal-content h2 {
+            margin-bottom: 20px;
+        }
+
+        .user-select-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .user-select-item {
+            padding: 12px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .user-select-item:hover {
+            background: #f0f2f5;
+        }
+
+        .user-select-item input {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="auth-screen">
+        <div class="auth-box">
+            <h1>Đăng nhập</h1>
+            <p>Chào mừng bạn trở lại!</p>
+            <form onsubmit="login(event)">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" placeholder="Nhập username" required>
+                </div>
+                <div class="form-group">
+                    <label>Mật khẩu</label>
+                    <input type="password" placeholder="Nhập mật khẩu" required>
+                </div>
+                <div class="link" onclick="showScreen('forgotPasswordScreen')">Quên mật khẩu?</div>
+                <button type="submit" class="btn">Đăng nhập</button>
+                <button type="button" class="btn btn-secondary" onclick="showScreen('registerScreen')">Tạo tài khoản mới</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Register Screen -->
+    <div id="registerScreen" class="auth-screen hidden">
+        <div class="auth-box">
+            <h1>Đăng ký</h1>
+            <p>Tạo tài khoản mới để bắt đầu</p>
+            <form onsubmit="register(event)">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" placeholder="Chọn username" required>
+                </div>
+                <div class="form-group">
+                    <label>Gmail</label>
+                    <input type="email" placeholder="your.email@gmail.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Mật khẩu</label>
+                    <input type="password" placeholder="Tạo mật khẩu" required>
+                </div>
+                <div class="form-group">
+                    <label>Xác nhận mật khẩu</label>
+                    <input type="password" placeholder="Nhập lại mật khẩu" required>
+                </div>
+                <button type="submit" class="btn">Đăng ký</button>
+                <div class="link" onclick="showScreen('loginScreen')">Đã có tài khoản? Đăng nhập</div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Forgot Password Screen -->
+    <div id="forgotPasswordScreen" class="auth-screen hidden">
+        <div class="auth-box">
+            <h1>Đặt lại mật khẩu</h1>
+            <p>Nhập Gmail để nhận link đặt lại mật khẩu</p>
+            <form onsubmit="forgotPassword(event)">
+                <div class="form-group">
+                    <label>Gmail</label>
+                    <input type="email" placeholder="your.email@gmail.com" required>
+                </div>
+                <button type="submit" class="btn">Gửi yêu cầu</button>
+                <div class="link" onclick="showScreen('loginScreen')">Quay lại đăng nhập</div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="container hidden">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>Chats</h2>
+                <div class="header-icons">
+                    <div class="icon-btn" onclick="showCreateGroupModal()">➕</div>
+                    <div class="icon-btn" onclick="togglePanel()">👤</div>
+                </div>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('chats')">Trò chuyện</div>
+                <div class="tab" onclick="switchTab('friends')">Bạn bè</div>
+                <div class="tab" onclick="switchTab('requests')">Lời mời</div>
+            </div>
+
+            <div class="search-box">
+                <input type="text" placeholder="🔍 Tìm kiếm..." oninput="searchUsers(this.value)">
+            </div>
+
+            <div class="chat-list" id="chatList">
+                <!-- Chat items will be dynamically added -->
+            </div>
+        </div>
+
+        <!-- Main Chat -->
+        <div class="chat-main">
+            <div class="chat-header">
+                <div class="chat-header-left">
+                    <div class="avatar">NH</div>
+                    <div>
+                        <div class="chat-name">Nguyễn Hoàng</div>
+                        <div class="user-status online-status">● Online</div>
+                    </div>
+                </div>
+                <div class="header-icons">
+                    <div class="icon-btn">📞</div>
+                    <div class="icon-btn">📹</div>
+                    <div class="icon-btn">⋮</div>
+                </div>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+                <div class="message">
+                    <div class="avatar">NH</div>
+                    <div>
+                        <div class="message-bubble">
+                            <div class="message-text">Chào bạn! Bạn có khỏe không?</div>
+                        </div>
+                        <div class="message-time">10:30 AM</div>
+                    </div>
+                </div>
+
+                <div class="message sent">
+                    <div>
+                        <div class="message-bubble">
+                            <div class="message-text">Chào! Mình khỏe, cảm ơn bạn 😊</div>
+                        </div>
+                        <div class="message-time">10:31 AM</div>
+                    </div>
+                </div>
+
+                <div class="message">
+                    <div class="avatar">NH</div>
+                    <div>
+                        <div class="message-bubble">
+                            <div class="message-text">Dự án của bạn tiến triển thế nào rồi?</div>
+                        </div>
+                        <div class="message-time">10:32 AM</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <div class="chat-input-box">
+                    <div class="icon-btn">😊</div>
+                    <div class="icon-btn">📎</div>
+                    <input type="text" placeholder="Nhập tin nhắn..." id="messageInput" onkeypress="handleEnter(event)">
+                    <button class="send-btn" onclick="sendMessage()">➤</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Panel -->
+        <div class="profile-panel hidden" id="profilePanel">
+            <div class="profile-header">
+                <div class="avatar profile-avatar">ME</div>
+                <div class="profile-name">Tài khoản của tôi</div>
+                <div class="profile-bio">Always available 🚀</div>
+            </div>
+
+            <div class="profile-section">
+                <h3>Thông tin cá nhân</h3>
+                <div class="profile-option" onclick="editProfile()">
+                    <span>📝 Chỉnh sửa hồ sơ</span>
+                    <span>›</span>
+                </div>
+                <div class="profile-option">
+                    <span>📧 Gmail</span>
+                    <span>user@gmail.com</span>
+                </div>
+            </div>
+
+            <div class="profile-section">
+                <h3>Cài đặt</h3>
+                <div class="profile-option">
+                    <span>🔔 Thông báo</span>
+                    <span>›</span>
+                </div>
+                <div class="profile-option">
+                    <span>🔒 Quyền riêng tư</span>
+                    <span>›</span>
+                </div>
+                <div class="profile-option">
+                    <span>🌙 Chế độ tối</span>
+                    <span>›</span>
+                </div>
+            </div>
+
+            <div class="profile-section">
+                <div class="profile-option" style="color: #ff3b30;" onclick="logout()">
+                    <span>🚪 Đăng xuất</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Group Modal -->
+    <div id="createGroupModal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Tạo nhóm mới</h2>
+            <div class="form-group">
+                <label>Tên nhóm</label>
+                <input type="text" id="groupName" placeholder="Nhập tên nhóm">
+            </div>
+            <div class="form-group">
+                <label>Chọn thành viên</label>
+                <div class="user-select-list">
+                    <div class="user-select-item">
+                        <input type="checkbox" id="user1">
+                        <div class="avatar" style="width: 40px; height: 40px; font-size: 14px;">NH</div>
+                        <label for="user1" style="cursor: pointer;">Nguyễn Hoàng</label>
+                    </div>
+                    <div class="user-select-item">
+                        <input type="checkbox" id="user2">
+                        <div class="avatar" style="width: 40px; height: 40px; font-size: 14px;">PT</div>
+                        <label for="user2" style="cursor: pointer;">Phạm Thảo</label>
+                    </div>
+                    <div class="user-select-item">
+                        <input type="checkbox" id="user3">
+                        <div class="avatar" style="width: 40px; height: 40px; font-size: 14px;">LM</div>
+                        <label for="user3" style="cursor: pointer;">Lê Minh</label>
+                    </div>
+                </div>
+            </div>
+            <button class="btn" onclick="createGroup()">Tạo nhóm</button>
+            <button class="btn btn-secondary" onclick="hideCreateGroupModal()">Hủy</button>
+        </div>
+    </div>
+
+    <script>
+        // Sample data
+        const chatData = [
+            { id: 1, name: 'Nguyễn Hoàng', avatar: 'NH', preview: 'Dự án của bạn tiến triển...', time: '10:32 AM', online: true },
+            { id: 2, name: 'Phạm Thảo', avatar: 'PT', preview: 'Hẹn gặp lại nhé!', time: 'Hôm qua', online: false },
+            { id: 3, name: 'Nhóm Dự Án', avatar: '👥', preview: 'Mai họp lúc 9h nhé', time: 'Hôm qua', online: true },
+            { id: 4, name: 'Lê Minh', avatar: 'LM', preview: 'OK bạn!', time: '2 ngày trước', online: false }
+        ];
+
+        const friendsData = [
+            { id: 1, name: 'Nguyễn Hoàng', avatar: 'NH', status: 'Online' },
+            { id: 2, name: 'Phạm Thảo', avatar: 'PT', status: 'Offline' },
+            { id: 4, name: 'Lê Minh', avatar: 'LM', status: 'Offline' }
+        ];
+
+        const requestsData = [
+            { id: 5, name: 'Trần Anh', avatar: 'TA', time: '2 giờ trước' },
+            { id: 6, name: 'Võ Hương', avatar: 'VH', time: '1 ngày trước' }
+        ];
+
+        // Initialize
+        function init() {
+            renderChatList();
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.auth-screen, .container').forEach(el => el.classList.add('hidden'));
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        function login(e) {
+            e.preventDefault();
+            alert('✅ Đăng nhập thành công!');
+            showScreen('mainApp');
+            init();
+        }
+
+        function register(e) {
+            e.preventDefault();
+            alert('✅ Đăng ký thành công! Vui lòng kiểm tra Gmail để xác thực tài khoản.');
+            showScreen('loginScreen');
+        }
+
+        function forgotPassword(e) {
+            e.preventDefault();
+            alert('✅ Email đặt lại mật khẩu đã được gửi! Vui lòng kiểm tra hộp thư.');
+            showScreen('loginScreen');
+        }
+
+        function logout() {
+            if (confirm('Bạn có chắc muốn đăng xuất?')) {
+                showScreen('loginScreen');
+            }
+        }
+
+        function togglePanel() {
+            const panel = document.getElementById('profilePanel');
+            panel.classList.toggle('hidden');
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (tab === 'chats') renderChatList();
+            else if (tab === 'friends') renderFriendsList();
+            else if (tab === 'requests') renderRequestsList();
+        }
+
+        function renderChatList() {
+            const list = document.getElementById('chatList');
+            list.innerHTML = chatData.map((chat, i) => `
+                <div class="chat-item ${i === 0 ? 'active' : ''}" onclick="selectChat(${chat.id})">
+                    <div class="avatar">${chat.avatar}</div>
+                    <div class="chat-info">
+                        <div class="chat-info-top">
+                            <span class="chat-name">${chat.name}</span>
+                            <span class="chat-time">${chat.time}</span>
+                        </div>
+                        <div class="chat-preview">${chat.preview}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderFriendsList() {
+            const list = document.getElementById('chatList');
+            list.innerHTML = friendsData.map(friend => `
+                <div class="chat-item">
+                    <div class="avatar">${friend.avatar}</div>
+                    <div class="chat-info">
+                        <div class="chat-info-top">
+                            <span class="chat-name">${friend.name}</span>
+                        </div>
+                        <div class="chat-preview ${friend.status === 'Online' ? 'online-status' : ''}">
+                            ● ${friend.status}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderRequestsList() {
+            const list = document.getElementById('chatList');
+            list.innerHTML = requestsData.map(req => `
+                <div class="chat-item">
+                    <div class="avatar">${req.avatar}</div>
+                    <div class="chat-info">
+                        <div class="chat-info-top">
+                            <span class="chat-name">${req.name}</span>
+                        </div>
+                        <div class="chat-preview">${req.time}</div>
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <button class="btn" style="padding: 8px 16px; font-size: 13px;" onclick="acceptRequest(${req.id})">Chấp nhận</button>
+                            <button class="btn btn-secondary" style="padding: 8px 16px; font-size: 13px;" onclick="declineRequest(${req.id})">Từ chối</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function selectChat(id) {
+            document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            if (!input.value.trim()) return;
+
+            const messagesDiv = document.getElementById('chatMessages');
+            const now = new Date();
+            const time = now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes() + ' ' + (now.getHours() >= 12 ? 'PM' : 'AM');
+            
+            const messageHTML = `
+                <div class="message sent">
+                    <div>
+                        <div class="message-bubble">
+                            <div class="message-text">${input.value}</div>
+                        </div>
+                        <div class="message-time">${time}</div>
+                    </div>
+                </div>
+            `;
+            
+            messagesDiv.insertAdjacentHTML('beforeend', messageHTML);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            input.value = '';
+        }
+
+        function handleEnter(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function searchUsers(query) {
+            if (!query.trim()) {
+                renderChatList();
+                return;
+            }
+            
+            const filtered = chatData.filter(chat => 
+                chat.name.toLowerCase().includes(query.toLowerCase())
+            );
+            
+            const list = document.getElementById('chatList');
+            if (filtered.length === 0) {
+                list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔍</div><div>Không tìm thấy kết quả</div></div>';
+            } else {
+                list.innerHTML = filtered.map(chat => `
+                    <div class="chat-item" onclick="selectChat(${chat.id})">
+                        <div class="avatar">${chat.avatar}</div>
+                        <div class="chat-info">
+                            <div class="chat-info-top">
+                                <span class="chat-name">${chat.name}</span>
+                                <span class="chat-time">${chat.time}</span>
+                            </div>
+                            <div class="chat-preview">${chat.preview}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function showCreateGroupModal() {
+            document.getElementById('createGroupModal').classList.remove('hidden');
+        }
+
+        function hideCreateGroupModal() {
+            document.getElementById('createGroupModal').classList.add('hidden');
+        }
+
+        function createGroup() {
+            const groupName = document.getElementById('groupName').value;
+            if (!groupName.trim()) {
+                alert('Vui lòng nhập tên nhóm!');
+                return;
+            }
+            
+            const checkedUsers = [];
+            document.querySelectorAll('.user-select-item input:checked').forEach(checkbox => {
+                checkedUsers.push(checkbox.id);
+            });
+            
+            if (checkedUsers.length === 0) {
+                alert('Vui lòng chọn ít nhất một thành viên!');
+                return;
+            }
+            
+            alert(`✅ Đã tạo nhóm "${groupName}" với ${checkedUsers.length} thành viên!`);
+            hideCreateGroupModal();
+            
+            // Add new group to chat list
+            chatData.unshift({
+                id: Date.now(),
+                name: groupName,
+                avatar: '👥',
+                preview: 'Nhóm vừa được tạo',
+                time: 'Vừa xong',
+                online: true
+            });
+            renderChatList();
+        }
+
+        function acceptRequest(id) {
+            alert('✅ Đã chấp nhận lời mời kết bạn!');
+            requestsData.splice(requestsData.findIndex(r => r.id === id), 1);
+            renderRequestsList();
+        }
+
+        function declineRequest(id) {
+            alert('❌ Đã từ chối lời mời kết bạn!');
+            requestsData.splice(requestsData.findIndex(r => r.id === id), 1);
+            renderRequestsList();
+        }
+
+        function editProfile() {
+            const newBio = prompt('Nhập bio mới của bạn:', 'Always available 🚀');
+            if (newBio !== null) {
+                document.querySelector('.profile-bio').textContent = newBio;
+                alert('✅ Đã cập nhật hồ sơ!');
+            }
+        }
+
+        // Initialize on load
+        window.onload = function() {
+            // Show login screen by default
+            showScreen('loginScreen');
+        };
+    </script>
+</body>
+</html>
