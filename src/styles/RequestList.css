@@ -32,6 +32,22 @@
   color: var(--text-light);
 }
 
+.request-description {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 2px 0;
+}
+
+.request-type-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--primary-color);
+}
+
+.group-request {
+  background: var(--background);
+}
+
 .request-actions {
   display: flex;
   flex-direction: column;
@@ -70,4 +86,5 @@
   background: var(--background);
   border-color: var(--text-secondary);
 }
+
 

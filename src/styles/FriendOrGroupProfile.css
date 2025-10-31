@@ -1,0 +1,299 @@
+.friend-group-profile-sidebar {
+  width: 380px;
+  height: 100%;
+  background: var(--surface);
+  border-left: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.3s ease-out;
+  position: relative;
+  z-index: 999;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.friend-group-profile-sidebar .profile-header {
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--border-color);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.friend-group-profile-sidebar .profile-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.friend-group-profile-sidebar .profile-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.friend-group-profile-sidebar .profile-section {
+  padding: 24px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.friend-group-profile-sidebar .profile-avatar-large {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.friend-group-profile-sidebar .avatar-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.friend-group-profile-sidebar .avatar-circle.group {
+  background: var(--secondary-color);
+  font-size: 40px;
+}
+
+.friend-group-profile-sidebar .profile-name {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.friend-group-profile-sidebar .profile-status {
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.friend-group-profile-sidebar .section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.friend-group-profile-sidebar .profile-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.friend-group-profile-sidebar .profile-item:last-child {
+  border-bottom: none;
+}
+
+.friend-group-profile-sidebar .profile-item.clickable {
+  cursor: pointer;
+  transition: background 0.2s;
+  margin: 0 -20px;
+  padding: 12px 20px;
+}
+
+.friend-group-profile-sidebar .profile-item.clickable:hover {
+  background: var(--background);
+}
+
+.friend-group-profile-sidebar .item-icon {
+  font-size: 20px;
+  width: 24px;
+  text-align: center;
+}
+
+.friend-group-profile-sidebar .item-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.friend-group-profile-sidebar .item-label {
+  font-size: 15px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.friend-group-profile-sidebar .item-value {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.friend-group-profile-sidebar .item-arrow {
+  font-size: 20px;
+  color: var(--text-light);
+}
+
+.friend-group-profile-sidebar .toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 24px;
+}
+
+.friend-group-profile-sidebar .toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.friend-group-profile-sidebar .toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.4s;
+  border-radius: 24px;
+}
+
+.friend-group-profile-sidebar .toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+.friend-group-profile-sidebar .toggle-switch input:checked + .toggle-slider {
+  background-color: var(--primary-color);
+}
+
+.friend-group-profile-sidebar .toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(24px);
+}
+
+.group-description {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  padding: 12px 0;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.member-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.member-item:hover {
+  background: var(--background);
+}
+
+.member-avatar {
+  position: relative;
+}
+
+.member-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.member-name {
+  font-size: 15px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.member-status {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.action-btn.primary {
+  background: var(--primary-color);
+  color: white;
+}
+
+.action-btn.primary:hover {
+  background: var(--primary-dark);
+}
+
+.action-btn.secondary {
+  background: var(--background);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.action-btn.secondary:hover {
+  background: var(--border-color);
+}
+
+.action-btn.danger {
+  background: transparent;
+  color: var(--error);
+  border: 1px solid var(--error);
+}
+
+.action-btn.danger:hover {
+  background: var(--error);
+  color: white;
+}
+
+.action-btn span:first-child {
+  font-size: 18px;
+}
+

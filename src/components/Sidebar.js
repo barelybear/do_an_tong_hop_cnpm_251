@@ -5,7 +5,7 @@ import RequestList from './RequestList';
 import CreateGroupModal from './CreateGroupModal';
 import '../styles/Sidebar.css';
 
-function Sidebar({ currentUser, selectedChat, onSelectChat, activeTab, onTabChange }) {
+function Sidebar({ selectedChat, onSelectChat, activeTab, onTabChange, onShowProfile, onShowFriendOrGroupProfile }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateGroup, setShowCreateGroup] = useState(false);
 
@@ -17,7 +17,7 @@ function Sidebar({ currentUser, selectedChat, onSelectChat, activeTab, onTabChan
           <button className="icon-btn" onClick={() => setShowCreateGroup(true)} title="Tạo nhóm mới">
             <span>+</span>
           </button>
-          <button className="icon-btn" title="Tài khoản">
+          <button className="icon-btn" onClick={() => onShowProfile && onShowProfile()} title="Tài khoản">
             <span>👤</span>
           </button>
         </div>
@@ -62,7 +62,11 @@ function Sidebar({ currentUser, selectedChat, onSelectChat, activeTab, onTabChan
           />
         )}
         {activeTab === 'friends' && (
-          <FriendList searchQuery={searchQuery} />
+          <FriendList 
+            searchQuery={searchQuery}
+            onSelectChat={onSelectChat}
+            onShowFriendOrGroupProfile={onShowFriendOrGroupProfile}
+          />
         )}
         {activeTab === 'requests' && (
           <RequestList />
@@ -77,4 +81,5 @@ function Sidebar({ currentUser, selectedChat, onSelectChat, activeTab, onTabChan
 }
 
 export default Sidebar;
+
 

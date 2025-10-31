@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import '../styles/ChatWindow.css';
 
-function ChatWindow({ selectedChat, currentUser, onShowProfile }) {
+function ChatWindow({ selectedChat, onShowFriendOrGroupProfile }) {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const messagesEndRef = useRef(null);
@@ -77,8 +77,7 @@ function ChatWindow({ selectedChat, currentUser, onShowProfile }) {
         senderId: 'me',
         content: file.name,
         timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-        isFile: true,
-        fileType: file.type.startsWith('image/') ? 'image' : 'video'
+        isFile: true
       };
       setMessages([...messages, newMessage]);
     }
@@ -101,21 +100,31 @@ function ChatWindow({ selectedChat, currentUser, onShowProfile }) {
         <div className="header-left">
           <div className="chat-avatar">
             <div className="avatar">{selectedChat.avatar}</div>
-            {selectedChat.status === 'online' && (
-              <span className="status-indicator online"></span>
+            {selectedChat.status && selectedChat.status !== 'hidden' && (
+              <span className={`status-indicator ${selectedChat.status === 'online' ? 'online' : selectedChat.status === 'busy' ? 'busy' : 'offline'}`}></span>
             )}
           </div>
           <div className="chat-info">
             <h2 className="chat-name">{selectedChat.name}</h2>
-            {selectedChat.status && (
-              <p className="chat-status">{selectedChat.status === 'online' ? 'Online' : 'Offline'}</p>
+            {selectedChat.status && selectedChat.status !== 'hidden' && (
+              <p className="chat-status">
+                {selectedChat.status === 'online' ? '🟢 Online' : 
+                 selectedChat.status === 'busy' ? '🔴 Bận' : 
+                 '⚫ Offline'}
+              </p>
             )}
           </div>
         </div>
         <div className="header-actions">
           <button className="icon-btn" title="Gọi thoại">📞</button>
           <button className="icon-btn" title="Gọi video">📹</button>
-          <button className="icon-btn" onClick={onShowProfile} title="Thông tin">⋮</button>
+          <button 
+            className="icon-btn" 
+            onClick={() => selectedChat && onShowFriendOrGroupProfile && onShowFriendOrGroupProfile(selectedChat)} 
+            title="Thông tin"
+          >
+            ⋮
+          </button>
         </div>
       </div>
 
@@ -174,4 +183,5 @@ function ChatWindow({ selectedChat, currentUser, onShowProfile }) {
 }
 
 export default ChatWindow;
+
 

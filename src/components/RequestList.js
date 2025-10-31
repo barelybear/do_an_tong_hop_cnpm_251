@@ -5,51 +5,97 @@ function RequestList() {
   const [requests, setRequests] = useState([
     {
       id: 'req1',
+      type: 'friend',
       username: 'Trần Anh',
       avatar: 'TA',
       timestamp: '2 giờ trước'
     },
     {
       id: 'req2',
+      type: 'friend',
       username: 'Võ Hương',
       avatar: 'VH',
       timestamp: '1 ngày trước'
+    },
+    {
+      id: 'req3',
+      type: 'group',
+      groupName: 'Nhóm Học Tập',
+      inviterName: 'Nguyễn Hoàng',
+      avatar: '👥',
+      timestamp: '3 giờ trước',
+      memberCount: 12
+    },
+    {
+      id: 'req4',
+      type: 'group',
+      groupName: 'Nhóm Dự Án Web',
+      inviterName: 'Phạm Thảo',
+      avatar: '👥',
+      timestamp: '1 ngày trước',
+      memberCount: 8
     }
   ]);
 
-  const handleAccept = (requestId) => {
+  const handleAccept = (requestId, type) => {
     // Xử lý chấp nhận lời mời
     setRequests(requests.filter(req => req.id !== requestId));
-    alert('Đã chấp nhận lời mời kết bạn!');
+    if (type === 'group') {
+      alert('Đã tham gia nhóm!');
+    } else {
+      alert('Đã chấp nhận lời mời kết bạn!');
+    }
   };
 
-  const handleReject = (requestId) => {
+  const handleReject = (requestId, type) => {
     // Xử lý từ chối lời mời
     setRequests(requests.filter(req => req.id !== requestId));
-    alert('Đã từ chối lời mời kết bạn!');
+    if (type === 'group') {
+      alert('Đã từ chối lời mời tham gia nhóm!');
+    } else {
+      alert('Đã từ chối lời mời kết bạn!');
+    }
   };
 
   return (
     <div className="request-list">
       {requests.map((request) => (
-        <div key={request.id} className="request-item">
+        <div key={request.id} className={`request-item ${request.type === 'group' ? 'group-request' : ''}`}>
           <div className="request-avatar">
-            <div className="avatar">{request.avatar}</div>
+            <div className={`avatar ${request.type === 'group' ? 'group' : ''}`}>
+              {request.avatar}
+            </div>
           </div>
           <div className="request-info">
-            <h3 className="request-name">{request.username}</h3>
-            <p className="request-time">{request.timestamp}</p>
+            {request.type === 'group' ? (
+              <>
+                <h3 className="request-name">
+                  <span className="request-type-label">👥 Nhóm:</span> {request.groupName}
+                </h3>
+                <p className="request-description">
+                  {request.inviterName} mời bạn tham gia
+                  {request.memberCount && ` • ${request.memberCount} thành viên`}
+                </p>
+                <p className="request-time">{request.timestamp}</p>
+              </>
+            ) : (
+              <>
+                <h3 className="request-name">{request.username}</h3>
+                <p className="request-description">Muốn kết bạn với bạn</p>
+                <p className="request-time">{request.timestamp}</p>
+              </>
+            )}
           </div>
           <div className="request-actions">
             <button
               className="btn-accept"
-              onClick={() => handleAccept(request.id)}
+              onClick={() => handleAccept(request.id, request.type)}
             >
-              Chấp nhận
+              {request.type === 'group' ? 'Tham gia' : 'Chấp nhận'}
             </button>
             <button
               className="btn-reject"
-              onClick={() => handleReject(request.id)}
+              onClick={() => handleReject(request.id, request.type)}
             >
               Từ chối
             </button>
@@ -57,11 +103,12 @@ function RequestList() {
         </div>
       ))}
       {requests.length === 0 && (
-        <div className="empty-state">Không có lời mời kết bạn mới</div>
+        <div className="empty-state">Không có lời mời mới</div>
       )}
     </div>
   );
 }
 
 export default RequestList;
+
 

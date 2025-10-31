@@ -6,6 +6,8 @@
   display: flex;
   flex-direction: column;
   animation: slideIn 0.3s ease-out;
+  position: relative;
+  z-index: 999;
 }
 
 @keyframes slideIn {
@@ -21,7 +23,7 @@
   padding: 20px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   border-bottom: 1px solid var(--border-color);
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
@@ -208,4 +210,58 @@
 .logout-btn:hover {
   opacity: 0.8;
 }
+
+.status-item {
+  position: relative;
+}
+
+.status-dropdown {
+  margin: 8px -20px 0;
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.status-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: background 0.2s;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.status-option:last-child {
+  border-bottom: none;
+}
+
+.status-option:hover {
+  background: var(--background);
+}
+
+.status-option.active {
+  background: var(--background);
+}
+
+.status-indicator-badge {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-option span:last-child {
+  font-size: 15px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.status-option.active span:last-child {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
 

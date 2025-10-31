@@ -21,7 +21,7 @@ function ChatList({ selectedChat, onSelectChat, searchQuery }) {
       lastMessage: 'Hẹn gặp lại nhé!',
       timestamp: 'Hôm qua',
       avatar: 'PT',
-      status: 'offline',
+      status: 'busy',
       unread: 0
     },
     {
@@ -40,7 +40,7 @@ function ChatList({ selectedChat, onSelectChat, searchQuery }) {
       lastMessage: 'OK bạn!',
       timestamp: '2 ngày trước',
       avatar: 'LM',
-      status: 'offline',
+      status: 'hidden',
       unread: 0
     }
   ]);
@@ -71,8 +71,8 @@ function ChatList({ selectedChat, onSelectChat, searchQuery }) {
             <div className={`avatar ${chat.type === 'group' ? 'group' : ''}`}>
               {chat.avatar}
             </div>
-            {chat.type === 'direct' && chat.status === 'online' && (
-              <span className="status-indicator online"></span>
+            {chat.type === 'direct' && chat.status && chat.status !== 'hidden' && (
+              <span className={`status-indicator ${chat.status === 'online' ? 'online' : chat.status === 'busy' ? 'busy' : 'offline'}`}></span>
             )}
           </div>
           <div className="chat-info">
@@ -97,4 +97,5 @@ function ChatList({ selectedChat, onSelectChat, searchQuery }) {
 }
 
 export default ChatList;
+
 

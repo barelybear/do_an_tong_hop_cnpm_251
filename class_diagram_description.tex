@@ -1,0 +1,216 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[vietnamese,english]{babel}
+\usepackage{amsmath}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{enumitem}
+
+\geometry{margin=2.5cm}
+
+\title{Mô Tả Hệ Thống Quản Lý Thiết Bị IoT\\
+\large{IoT Device Management System Class Diagram Description}}
+\author{System Documentation}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Tổng Quan Hệ Thống}
+
+Hệ thống được mô tả trong class diagram là một \textbf{hệ thống quản lý thiết bị IoT thông minh} (Smart IoT Device Management System) với các chức năng chính:
+\begin{itemize}
+    \item Quản lý người dùng và xác thực
+    \item Quản lý thiết bị thông minh (Smart Devices)
+    \item Thu thập và xử lý dữ liệu cảm biến
+    \item Quản lý luật tự động (Automation Rules)
+    \item Quản lý lịch trình (Scheduling)
+    \item Gửi thông báo (Notifications)
+    \item Ghi log hoạt động
+\end{itemize}
+
+\section{Các Class Chính}
+
+\begin{itemize}
+    \item \textbf{USERS: } Lớp quản lý người dùng và xác thực. Hệ thống yêu cầu xác thực người dùng và phân quyền dựa vào thông tin đăng nhập và vai trò của tài khoản.
+    \begin{itemize}
+        \item Thuộc tính: id (ID duy nhất), role (Vai trò), email (Email người dùng), username (Tên đăng nhập), password (Mật khẩu đã được hash), status (Trạng thái tài khoản)
+        \item Các phương thức chính: register (Đăng ký người dùng mới), login (Đăng nhập), logout (Đăng xuất), getAll (Lấy danh sách), getUserInfor (Lấy thông tin), update (Cập nhật), delete (Xóa)
+        \item Mật khẩu được hash trước khi lưu trữ để đảm bảo bảo mật
+        \item Hệ thống kiểm tra email tồn tại trước khi cho phép đăng ký tài khoản mới
+    \end{itemize}
+    
+    \item \textbf{DEVICE: } Lưu trữ thông tin của các thiết bị điều khiển (máy bơm, đèn,...). Quản lý thiết bị thông minh trong hệ thống.
+    \begin{itemize}
+        \item Thuộc tính: id (ID thiết bị), deviceName (Tên thiết bị), description (Mô tả), status (Trạng thái), mode (Chế độ hoạt động), adaDevName (Tên định danh trên Adafruit Server)
+        \item Ghi nhận tên, trạng thái và chế độ làm việc của thiết bị
+        \item Cho phép bật/tắt thiết bị, thay đổi chế độ hoạt động
+        \item Đăng ký theo dõi realtime cho tự động hóa và lịch trình
+        \item Áp dụng các hành động điều khiển thiết bị với công suất được chỉ định
+    \end{itemize}
+
+    \item \textbf{SENSOR: } Lưu trữ thông tin cảm biến theo dõi môi trường.
+    \begin{itemize}
+        \item Thuộc tính: id (ID cảm biến), sensorName (Tên feed trên Adafruit Server), name (Tên hiển thị), status (Trạng thái), description (Mô tả)
+        \item Ví dụ: DHT20 (cảm biến nhiệt độ, độ ẩm), cảm biến ánh sáng
+        \item Hệ thống kiểm tra tên cảm biến đã tồn tại trước khi tạo mới
+    \end{itemize}
+
+    \item \textbf{SENSORDATA: } Lưu trữ dữ liệu cảm biến theo thời gian để phân tích và hiển thị.
+    \begin{itemize}
+        \item Thuộc tính: id (ID bản ghi), SDsensorId (ID cảm biến), SDataId (ID dữ liệu), time (Thời gian ghi nhận), value (Giá trị đo được)
+        \item Hỗ trợ lấy dữ liệu với bộ lọc theo thời gian và điều kiện
+        \item Lấy giá trị mới nhất từ cảm biến để theo dõi realtime
+        \item Tính toán giá trị trung bình theo khoảng thời gian được chỉ định
+    \end{itemize}
+
+    \item \textbf{SETRULE: } Quản lý thiết lập luật (Rule Sets) điều khiển thiết bị tự động dựa trên điều kiện cảm biến.
+    \begin{itemize}
+        \item Thuộc tính: id (ID setRule), dev\_Id (ID thiết bị), power (Công suất/giá trị điều khiển), status (ON/OFF), emailNotification (Bật/tắt thông báo email)
+        \item Chứa một hoặc nhiều luật điều kiện để điều khiển thiết bị
+        \item Cho phép bật/tắt toàn bộ setRule hoặc thông báo email
+        \item Cập nhật thông tin setRule và các luật đi kèm
+    \end{itemize}
+
+    \item \textbf{RULE: } Quản lý các luật tự động (Automation Rules) để điều khiển thiết bị.
+    \begin{itemize}
+        \item Thuộc tính: id (ID luật), setID (ID setRule), sensorID (ID cảm biến), logicOperator (Toán tử logic AND/OR/NOT), operator (Toán tử so sánh >, <, =), condition (Giá trị điều kiện), action (Hành động), description (Mô tả)
+        \item Đánh giá điều kiện cảm biến với giá trị thời gian thực
+        \item Khi điều kiện thỏa mãn, kích hoạt hành động điều khiển thiết bị
+    \end{itemize}
+
+    \item \textbf{SCHEDULE: } Quản lý lịch trình tự động để điều khiển thiết bị theo thời gian định sẵn.
+    \begin{itemize}
+        \item Thuộc tính: id (ID lịch trình), dev\_Id (ID thiết bị), timeStart (Thời gian bắt đầu), timeEnd (Thời gian kết thúc), actionDay (Ngày thực hiện), power (Công suất), status (Trạng thái)
+        \item Hệ thống kiểm tra lịch trình theo thời gian thực
+        \item Khi thời gian thỏa mãn điều kiện, thiết bị được điều khiển tự động
+        \item Cho phép tạo, cập nhật và xóa lịch trình
+    \end{itemize}
+
+    \item \textbf{NOTIFICATION: } Lưu trữ thông báo được tạo từ các setRule khi luật được kích hoạt.
+    \begin{itemize}
+        \item Thuộc tính: id (ID thông báo), setID (ID setRule), title (Tiêu đề), message (Nội dung), type (Loại thông báo)
+        \item Thông báo được gửi tới người dùng khi luật tự động được kích hoạt
+        \item Hỗ trợ gửi thông báo qua email nếu được kích hoạt trong setRule
+        \item Theo dõi trạng thái đọc/chưa đọc của thông báo
+    \end{itemize}
+
+    \item \textbf{USERNOTIF: } Liên kết giữa người dùng và thông báo, quản lý trạng thái đọc của thông báo.
+    \begin{itemize}
+        \item Thuộc tính: id (ID bản ghi), userID (ID người dùng), notifID (ID thông báo), status (READ/UNREAD)
+        \item Một người dùng có thể nhận nhiều thông báo
+        \item Theo dõi thông báo đã đọc/chưa đọc
+        \item Đếm số thông báo chưa đọc cho mỗi người dùng
+    \end{itemize}
+
+    \item \textbf{LOG: } Ghi lại log hoạt động của thiết bị trong hệ thống.
+    \begin{itemize}
+        \item Thuộc tính: id (ID bản ghi), dev\_Id (ID thiết bị), value (Giá trị log), time (Thời gian ghi nhận)
+        \item Ghi nhận mọi thay đổi trạng thái và hoạt động của thiết bị
+        \item Hỗ trợ lọc log theo thiết bị và thời gian
+        \item Tự động xóa log cũ để tiết kiệm dung lượng lưu trữ
+    \end{itemize}
+\end{itemize}
+
+\section{Mối Quan Hệ Giữa Các Class}
+
+\subsection{Quan hệ Composition (1 - *)}
+\begin{itemize}
+    \item \textbf{Device $\rightarrow$ Schedule}: Một thiết bị có thể có nhiều lịch trình
+    \item \textbf{Device $\rightarrow$ Log}: Một thiết bị tạo ra nhiều log hoạt động
+    \item \textbf{Device $\rightarrow$ setRule}: Một thiết bị có thể có nhiều setRule
+    \item \textbf{Sensor $\rightarrow$ SensorData}: Một cảm biến ghi nhận nhiều dữ liệu
+    \item \textbf{setRule $\rightarrow$ Rule}: Một setRule chứa nhiều luật
+    \item \textbf{Notification $\rightarrow$ setRule}: Một thông báo liên quan đến setRule
+\end{itemize}
+
+\subsection{Quan hệ Theo dõi và Điều khiển}
+\begin{itemize}
+    \item \textbf{setRule $\rightarrow$ Rule}: setRule sử dụng các Rule
+    \item \textbf{Sensor $\leftrightarrow$ Rule}: Sensor được Rule theo dõi, Rule thuộc về một Sensor
+    \item \textbf{Rule $\rightarrow$ setRule}: Rule thuộc về một setRule
+\end{itemize}
+
+\subsection{Quan hệ Người dùng và Thông báo}
+\begin{itemize}
+    \item \textbf{Users $\leftrightarrow$ Notification}: Many-to-many - Nhiều người dùng nhận nhiều thông báo
+    \item \textbf{Users $\rightarrow$ UserNotif}: 1 - nhiều liên kết
+    \item \textbf{Notification $\rightarrow$ UserNotif}: 1 - nhiều liên kết
+\end{itemize}
+
+\section{Luồng Hoạt Động Chính}
+
+\subsection{Quá trình Tự động hóa}
+\begin{enumerate}
+    \item \textbf{Sensor} thu thập dữ liệu thời gian thực
+    \item \textbf{SensorData} lưu trữ giá trị và thời gian
+    \item \textbf{Rule} đánh giá điều kiện dựa trên giá trị cảm biến
+    \item Khi điều kiện thỏa mãn, \textbf{setRule} điều khiển \textbf{Device}
+    \item \textbf{Notification} được tạo và gửi tới \textbf{Users} thông qua \textbf{UserNotif}
+    \item \textbf{Log} ghi lại hoạt động của thiết bị
+\end{enumerate}
+
+\subsection{Quá trình Lịch trình}
+\begin{enumerate}
+    \item Hệ thống kiểm tra \textbf{Schedule} theo thời gian thực
+    \item Nếu \texttt{shouldExecute()} trả về true, \textbf{Device} được điều khiển
+    \item \textbf{Log} ghi lại hoạt động
+\end{enumerate}
+
+\subsection{Quản lý Người dùng}
+\begin{enumerate}
+    \item Người dùng đăng ký qua \texttt{Users.register()}
+    \item Đăng nhập qua \texttt{Users.login()}
+    \item Người dùng có thể xem/quản lý thiết bị, đọc thông báo
+    \item Hệ thống ghi log các hoạt động quan trọng
+\end{enumerate}
+
+\section{Đặc Điểm Kỹ Thuật}
+
+\subsection{Bảo mật}
+\begin{itemize}
+    \item Mật khẩu được hash trước khi lưu trữ (\texttt{hashPassword})
+    \item Kiểm tra email tồn tại trước khi đăng ký
+    \item Authentication và Authorization thông qua \texttt{role}
+\end{itemize}
+
+\subsection{Realtime Processing}
+\begin{itemize}
+    \item Theo dõi realtime cho tự động hóa (\texttt{registerRealtimeAuto})
+    \item Theo dõi realtime cho lịch trình (\texttt{registerRealtimeSchedule})
+    \item Lấy giá trị mới nhất từ cảm biến (\texttt{getLatest})
+\end{itemize}
+
+\subsection{Dữ liệu và Phân tích}
+\begin{itemize}
+    \item Lưu trữ dữ liệu cảm biến theo thời gian
+    \item Tính toán giá trị trung bình (\texttt{getAverage})
+    \item Lọc dữ liệu theo bộ lọc tùy chỉnh
+    \item Xóa dữ liệu cũ tự động (\texttt{deleteOld})
+\end{itemize}
+
+\subsection{Thông báo và Tương tác}
+\begin{itemize}
+    \item Thông báo email tùy chọn (\texttt{emailNotification})
+    \item Theo dõi trạng thái đọc/chưa đọc thông báo
+    \item Đếm số thông báo chưa đọc
+\end{itemize}
+
+\section{Kết Luận}
+
+Hệ thống này là một giải pháp IoT hoàn chỉnh với các chức năng:
+\begin{itemize}
+    \item Quản lý người dùng và phân quyền
+    \item Điều khiển thiết bị thông minh từ xa
+    \item Thu thập và phân tích dữ liệu cảm biến
+    \item Tự động hóa dựa trên luật và lịch trình
+    \item Thông báo và ghi log toàn diện
+\end{itemize}
+
+Hệ thống được thiết kế để linh hoạt, có thể mở rộng và dễ bảo trì, phù hợp cho các ứng dụng smart home, smart office, và các hệ thống IoT công nghiệp.
+
+\end{document}

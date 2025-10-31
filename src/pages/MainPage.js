@@ -2,41 +2,65 @@ import React, { useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import ChatWindow from '../components/ChatWindow';
 import UserProfile from '../components/UserProfile';
+import FriendOrGroupProfile from '../components/FriendOrGroupProfile';
 import '../styles/MainPage.css';
 
 function MainPage({ currentUser, onLogout }) {
   const [selectedChat, setSelectedChat] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [showFriendOrGroupProfile, setShowFriendOrGroupProfile] = useState(false);
+  const [profileChat, setProfileChat] = useState(null);
   const [activeTab, setActiveTab] = useState('chats'); // 'chats', 'friends', 'requests'
 
   return (
     <div className="main-page">
       <Sidebar
-        currentUser={currentUser}
         selectedChat={selectedChat}
         onSelectChat={setSelectedChat}
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        onShowProfile={() => setShowProfile(true)}
+        onShowFriendOrGroupProfile={(chat) => {
+          setProfileChat(chat);
+          setShowFriendOrGroupProfile(true);
+        }}
       />
       
       <div className="main-content">
         <ChatWindow
           selectedChat={selectedChat}
-          currentUser={currentUser}
-          onShowProfile={() => setShowProfile(true)}
+          onShowFriendOrGroupProfile={(chat) => {
+            setProfileChat(chat);
+            setShowFriendOrGroupProfile(true);
+          }}
         />
       </div>
 
       {showProfile && (
-        <UserProfile
-          currentUser={currentUser}
-          onClose={() => setShowProfile(false)}
-          onLogout={onLogout}
-        />
+        <>
+          <div className="profile-overlay" onClick={() => setShowProfile(false)}></div>
+          <UserProfile
+            currentUser={currentUser}
+            onClose={() => setShowProfile(false)}
+            onLogout={onLogout}
+          />
+        </>
+      )}
+
+      {showFriendOrGroupProfile && profileChat && (
+        <>
+          <div className="profile-overlay" onClick={() => setShowFriendOrGroupProfile(false)}></div>
+          <FriendOrGroupProfile
+            chat={profileChat}
+            currentUser={currentUser}
+            onClose={() => setShowFriendOrGroupProfile(false)}
+          />
+        </>
       )}
     </div>
   );
 }
 
 export default MainPage;
+
 

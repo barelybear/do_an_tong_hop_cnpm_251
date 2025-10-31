@@ -20,6 +20,22 @@
   --success: #4CAF50;
 }
 
+:root.dark-mode {
+  --primary-color: #7C75FF;
+  --primary-dark: #8B84FF;
+  --secondary-color: #8B84FF;
+  --background: #1A1A1A;
+  --surface: #2D2D2D;
+  --text-primary: #E5E5E5;
+  --text-secondary: #B0B0B0;
+  --text-light: #808080;
+  --border-color: #3D3D3D;
+  --online-status: #4CAF50;
+  --offline-status: #666666;
+  --error: #FF5252;
+  --success: #4CAF50;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
@@ -80,6 +96,10 @@ body {
 
 .status-indicator.online {
   background: var(--online-status);
+}
+
+.status-indicator.busy {
+  background: var(--error);
 }
 
 .status-indicator.offline {
@@ -193,4 +213,13 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #bbb;
 }
+
+:root.dark-mode ::-webkit-scrollbar-thumb {
+  background: #555;
+}
+
+:root.dark-mode ::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}
+
 
