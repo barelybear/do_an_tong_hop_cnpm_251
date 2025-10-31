@@ -9,7 +9,7 @@ function ChatList({ selectedChat, onSelectChat, searchQuery }) {
       type: 'direct',
       name: 'Nguyễn Hoàng',
       lastMessage: 'Dự án của bạn tiến triển thế nào rồi?',
-      timestamp: '10:32 AM',
+      timestamp: "10:30 AM",
       avatar: 'NH',
       status: 'online',
       unread: 0

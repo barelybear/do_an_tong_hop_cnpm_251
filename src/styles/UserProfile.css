@@ -264,4 +264,50 @@
   color: var(--primary-color);
 }
 
+.language-item {
+  position: relative;
+}
+
+.language-dropdown {
+  margin: 8px -20px 0;
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.language-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: background 0.2s;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.language-option:last-child {
+  border-bottom: none;
+}
+
+.language-option:hover {
+  background: var(--background);
+}
+
+.language-option.active {
+  background: var(--background);
+}
+
+.language-option span {
+  font-size: 15px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.language-option.active span {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
 

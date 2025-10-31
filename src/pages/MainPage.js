@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import ChatWindow from '../components/ChatWindow';
 import UserProfile from '../components/UserProfile';
@@ -11,6 +11,28 @@ function MainPage({ currentUser, onLogout }) {
   const [showFriendOrGroupProfile, setShowFriendOrGroupProfile] = useState(false);
   const [profileChat, setProfileChat] = useState(null);
   const [activeTab, setActiveTab] = useState('chats'); // 'chats', 'friends', 'requests'
+  const [userLanguage, setUserLanguage] = useState(() => {
+    return localStorage.getItem('userLanguage') || 'vi';
+  });
+
+  // Listen for language changes from UserProfile
+  useEffect(() => {
+    const handleLanguageChange = () => {
+      setUserLanguage(localStorage.getItem('userLanguage') || 'vi');
+    };
+    window.addEventListener('storage', handleLanguageChange);
+    // Check periodically (in case same window)
+    const interval = setInterval(() => {
+      const lang = localStorage.getItem('userLanguage') || 'vi';
+      if (lang !== userLanguage) {
+        setUserLanguage(lang);
+      }
+    }, 500);
+    return () => {
+      window.removeEventListener('storage', handleLanguageChange);
+      clearInterval(interval);
+    };
+  }, [userLanguage]);
 
   return (
     <div className="main-page">
@@ -29,6 +51,7 @@ function MainPage({ currentUser, onLogout }) {
       <div className="main-content">
         <ChatWindow
           selectedChat={selectedChat}
+          userLanguage={userLanguage}
           onShowFriendOrGroupProfile={(chat) => {
             setProfileChat(chat);
             setShowFriendOrGroupProfile(true);
@@ -62,5 +85,4 @@ function MainPage({ currentUser, onLogout }) {
 }
 
 export default MainPage;
-
 

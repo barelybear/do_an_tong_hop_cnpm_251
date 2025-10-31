@@ -10,6 +10,10 @@ function UserProfile({ currentUser, onClose, onLogout }) {
     return localStorage.getItem('userStatus') || 'online';
   });
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('userLanguage') || 'vi';
+  });
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [profile] = useState({
     username: currentUser.username,
     gmail: currentUser.gmail,
@@ -49,6 +53,11 @@ function UserProfile({ currentUser, onClose, onLogout }) {
     localStorage.setItem('userStatus', status);
     // TODO: Update status in real-time to server/Firebase
   }, [status]);
+
+  useEffect(() => {
+    localStorage.setItem('userLanguage', language);
+    // TODO: Update language to server/Firebase
+  }, [language]);
 
   const handleDarkModeToggle = (e) => {
     setIsDarkMode(e.target.checked);
@@ -156,6 +165,78 @@ function UserProfile({ currentUser, onClose, onLogout }) {
 
         <div className="profile-section">
           <h4 className="section-title">CÀI ĐẶT</h4>
+          
+          <div 
+            className="profile-item clickable language-item" 
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowLanguageDropdown(!showLanguageDropdown);
+            }}
+          >
+            <span className="item-icon">🌐</span>
+            <div className="item-content">
+              <span className="item-label">Ngôn ngữ của bạn</span>
+              <span className="item-value">
+                {language === 'vi' ? '🇻🇳 Tiếng Việt' :
+                 language === 'en' ? '🇬🇧 English' :
+                 language === 'ja' ? '🇯🇵 日本語' :
+                 language === 'ko' ? '🇰🇷 한국어' :
+                 language === 'zh' ? '🇨🇳 中文' :
+                 '🇻🇳 Tiếng Việt'}
+              </span>
+            </div>
+            <span className="item-arrow">{showLanguageDropdown ? '⌄' : '›'}</span>
+          </div>
+
+          {showLanguageDropdown && (
+            <div className="language-dropdown" onClick={(e) => e.stopPropagation()}>
+              <div 
+                className={`language-option ${language === 'vi' ? 'active' : ''}`}
+                onClick={() => {
+                  setLanguage('vi');
+                  setShowLanguageDropdown(false);
+                }}
+              >
+                <span>🇻🇳 Tiếng Việt</span>
+              </div>
+              <div 
+                className={`language-option ${language === 'en' ? 'active' : ''}`}
+                onClick={() => {
+                  setLanguage('en');
+                  setShowLanguageDropdown(false);
+                }}
+              >
+                <span>🇬🇧 English</span>
+              </div>
+              <div 
+                className={`language-option ${language === 'ja' ? 'active' : ''}`}
+                onClick={() => {
+                  setLanguage('ja');
+                  setShowLanguageDropdown(false);
+                }}
+              >
+                <span>🇯🇵 日本語</span>
+              </div>
+              <div 
+                className={`language-option ${language === 'ko' ? 'active' : ''}`}
+                onClick={() => {
+                  setLanguage('ko');
+                  setShowLanguageDropdown(false);
+                }}
+              >
+                <span>🇰🇷 한국어</span>
+              </div>
+              <div 
+                className={`language-option ${language === 'zh' ? 'active' : ''}`}
+                onClick={() => {
+                  setLanguage('zh');
+                  setShowLanguageDropdown(false);
+                }}
+              >
+                <span>🇨🇳 中文</span>
+              </div>
+            </div>
+          )}
           
           <div className="profile-item clickable">
             <span className="item-icon">🔔</span>

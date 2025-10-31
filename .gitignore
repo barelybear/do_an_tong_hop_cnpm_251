@@ -23,4 +23,7 @@ yarn-error.log*
 .env
 .env.local
 
+# Firebase credentials
+trans-chat-key.json
+
 
