@@ -2,6 +2,10 @@
 
 Ứng dụng chat desktop được xây dựng với ElectronJS và React.
 
+📖 **[Xem Kiến Trúc Phần Mềm Chi Tiết](./SOFTWARE_ARCHITECTURE.md)**
+
+🎨 **[Xem Sơ Đồ Kiến Trúc (Mermaid Diagrams)](./architecture-diagram.md)**
+
 ## Tính năng
 
 ### Quản lý tài khoản
@@ -100,13 +104,29 @@ chatDessktop/
 
 ## Công nghệ sử dụng
 
+### Frontend
 - **ElectronJS**: Framework để xây dựng ứng dụng desktop
-- **React**: Thư viện UI
+- **React 18**: Thư viện UI component-based
 - **Webpack**: Module bundler
 - **Babel**: JavaScript compiler
-- **Firebase Firestore**: Database (cần cấu hình)
-- **Google Drive API**: Lưu trữ file đa phương tiện (cần cấu hình)
-- **Cloud Translation API**: Dịch tin nhắn (cần cấu hình)
+
+### Backend
+- **Python 3.x**: Server-side logic
+- **Flask**: REST API framework
+- **Flask-CORS**: Cross-origin support
+- **Firebase Admin SDK**: Database & Auth integration
+- **Bcrypt**: Password hashing
+
+### External Services
+- **Firebase Firestore**: NoSQL database cho users, chats, messages
+- **Firebase Authentication**: Xác thực người dùng
+- **pCloud API**: Lưu trữ file đa phương tiện (ảnh, video)
+- **Google Translation API**: Dịch tin nhắn đa ngôn ngữ
+
+### Kiến Trúc
+- **Client-Server Architecture**: 3 lớp (Frontend → Backend → Services)
+- **RESTful API**: HTTP/JSON communication
+- **Manager Pattern**: Separation of concerns
 
 ## Tích hợp Firebase
 

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import '../styles/LoginPage.css';
+import { apiCall } from '../utils/api';
 
 function LoginPage({ onLogin }) {
   const [isRegister, setIsRegister] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -17,7 +19,7 @@ function LoginPage({ onLogin }) {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (isRegister) {
@@ -30,21 +32,49 @@ function LoginPage({ onLogin }) {
         alert('Vui lòng điền đầy đủ thông tin.');
         return;
       }
-      // Mock registration success
-      alert('Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.');
-      setIsRegister(false);
+      
+      // Call sign up API
+      try {
+        setLoading(true);
+        const response = await apiCall('sign_up', [formData.username, formData.password, formData.gmail]);
+        if (response.status === 'success' && response.output) {
+          alert('Đăng ký thành công! Vui lòng đăng nhập.');
+          setIsRegister(false);
+          setFormData({ ...formData, password: '', confirmPassword: '' });
+        } else {
+          alert('Đăng ký thất bại. Vui lòng thử lại.');
+        }
+      } catch (error) {
+        console.error('Registration error:', error);
+        alert('Lỗi kết nối đến server. Vui lòng thử lại.');
+      } finally {
+        setLoading(false);
+      }
     } else {
-      // Mock login
+      // Call login API
       if (formData.username && formData.password) {
-        onLogin({
-          id: 'user123',
-          username: formData.username,
-          gmail: 'user@gmail.com',
-          avatar: 'https://via.placeholder.com/150',
-          status: 'online'
-        });
+        try {
+          setLoading(true);
+          const response = await apiCall('login', [formData.username, formData.password]);
+          if (response.status === 'success' && response.output && response.is_user) {
+            onLogin({
+              id: response.username,
+              username: response.username,
+              gmail: response.gmail,
+              avatar: 'https://via.placeholder.com/150',
+              status: 'online'
+            });
+          } else {
+            alert('Sai tên đăng nhập hoặc mật khẩu.');
+          }
+        } catch (error) {
+          console.error('Login error:', error);
+          alert('Lỗi kết nối đến server. Vui lòng thử lại.');
+        } finally {
+          setLoading(false);
+        }
       } else {
-        alert('Sai tên đăng nhập hoặc mật khẩu.');
+        alert('Vui lòng điền đầy đủ thông tin.');
       }
     }
   };
@@ -115,8 +145,8 @@ function LoginPage({ onLogin }) {
               </div>
             )}
 
-            <button type="submit" className="btn-primary">
-              {isRegister ? 'Đăng ký' : 'Đăng nhập'}
+            <button type="submit" className="btn-primary" disabled={loading}>
+              {loading ? 'Đang xử lý...' : (isRegister ? 'Đăng ký' : 'Đăng nhập')}
             </button>
 
             <button

@@ -1,0 +1,212 @@
+====================================================
+HOÀN TẤT KIẾN TRÚC PHẦN MỀM - CHAT DESKTOP APP
+====================================================
+
+📁 CÁC FILE ĐÃ TẠO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. SOFTWARE_ARCHITECTURE.md
+   - Kiến trúc chi tiết toàn bộ hệ thống
+   - Mô tả các lớp: Frontend, Backend, Services
+   - Database schema đầy đủ
+   - Luồng dữ liệu chi tiết
+   - Bảo mật và deployment
+
+2. architecture-diagram.md
+   - Sơ đồ Mermaid có thể render
+   - Tổng quan hệ thống
+   - Cấu trúc Frontend
+   - Backend Architecture
+   - Data flow sequences
+   - Database schema ERD
+   - Component interactions
+
+3. README.md (Đã cập nhật)
+   - Thêm links đến các file kiến trúc
+   - Bổ sung thông tin công nghệ đầy đủ
+   - Cấu trúc rõ ràng hơn
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🏗️ KIẾN TRÚC 3 LỚP:
+
+┌──────────────────────────────────────────┐
+│      LỚP 1: FRONTEND (Client)            │
+├──────────────────────────────────────────┤
+│ • ElectronJS - Desktop shell             │
+│ • React 18 - UI components               │
+│ • Webpack + Babel - Build tools          │
+│ • api.js - HTTP client                   │
+└──────────────────────────────────────────┘
+                    ↓ HTTP REST API
+┌──────────────────────────────────────────┐
+│      LỚP 2: BACKEND (Server)             │
+├──────────────────────────────────────────┤
+│ • Flask - Web framework                  │
+│ • SystemController - Singleton           │
+│ • Managers:                              │
+│   - AuthManager (login, signup)          │
+│   - UserManager (profile, friends)       │
+│   - ChatManager (messages, translate)    │
+│   - FileManager (upload/download)        │
+│   - GroupManager (groups)                │
+│   - NotificationManager (notifications)  │
+└──────────────────────────────────────────┘
+                    ↓
+┌──────────────────────────────────────────┐
+│   LỚP 3: EXTERNAL SERVICES               │
+├──────────────────────────────────────────┤
+│ • Firebase Firestore - Database          │
+│ • Firebase Auth - Authentication         │
+│ • pCloud API - Cloud Storage             │
+│ • Google Translation API                 │
+└──────────────────────────────────────────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔥 FIREBASE FIRESTORE SCHEMA:
+
+Collections:
+  • users/{username}
+    - Personal info, friends, groups
+    - Status, avatar, bio
+    - Notifications, blocked users
+    
+  • gmail/{gmail}
+    - Username mapping
+    
+  • chat/{chatId}
+    - Direct conversations
+    - Sub-collection: conversation
+      * Messages with metadata
+    
+  • groups/{groupName}
+    - Group info, members, admins
+    - Sub-collection: conversation
+      * Group messages
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+☁️ PCLOUD INTEGRATION:
+
+File Upload Flow:
+  1. User chọn file
+  2. Backend upload → pCloud API
+  3. Get public URL
+  4. Save URL to Firestore
+  5. Return URL to frontend
+
+Supports:
+  - Images (jpg, png, gif...)
+  - Videos
+  - Documents
+  - MIME type detection
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🌐 GOOGLE TRANSLATION API:
+
+Features:
+  - Real-time message translation
+  - Multi-language support:
+    * vi (Tiếng Việt)
+    * en (English)
+    * ja (日本語)
+    * ko (한국어)
+    * zh (中文)
+
+Flow:
+  User clicks Translate
+    → Backend calls API
+    → Return translated text
+    → Display in UI
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔐 BẢO MẬT:
+
+• Password Hashing: Bcrypt with salt
+• Session Tracking: IP + timestamp
+• Status Management: online/offline
+• Block Mechanism: User blocking
+• CORS Protection: Origin restrictions
+• Input Validation: Sanitization
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🚀 QUY TRÌNH HOẠT ĐỘNG:
+
+1. USER LOGIN:
+   LoginPage → api.js → Flask → AuthManager
+   → Verify credentials → Update status
+   → Load current_user → Return to frontend
+
+2. SEND MESSAGE:
+   ChatWindow → api.js → Flask → ChatManager
+   → Save to Firestore → Notify recipient
+   → Return success → Update UI
+
+3. UPLOAD FILE:
+   ChatWindow → api.js → Flask → FileManager
+   → Upload to pCloud → Get URL
+   → Save message with URL → Update UI
+
+4. TRANSLATE:
+   ChatWindow → api.js → Flask → ChatManager
+   → Call Translation API → Return text
+   → Display in UI
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 TECHNOLOGY STACK:
+
+Frontend:
+  • ElectronJS v27
+  • React 18.2
+  • Webpack 5
+  • Babel 7
+
+Backend:
+  • Python 3.x
+  • Flask
+  • Firebase Admin SDK
+  • Bcrypt
+
+External:
+  • Firebase Firestore
+  • Firebase Auth
+  • pCloud API
+  • Google Translate API
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📖 CÁCH XEM KIẾN TRÚC:
+
+1. SOFTWARE_ARCHITECTURE.md:
+   - Mở file để đọc chi tiết
+   - Có diagrams ASCII
+   - Luồng dữ liệu chi tiết
+
+2. architecture-diagram.md:
+   - Cần Mermaid renderer
+   - Hoặc xem trên GitHub/GitLab
+   - Hoặc VS Code với Mermaid extension
+
+3. GitHub/GitLab:
+   - Upload lên repo
+   - Render tự động với Mermaid
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ HOÀN TẤT!
+
+Tất cả documentation đã được tạo thành công.
+Hệ thống có kiến trúc rõ ràng, dễ hiểu, dễ mở rộng.
+
+Để bắt đầu phát triển:
+  1. Đọc SOFTWARE_ARCHITECTURE.md
+  2. Xem sơ đồ trong architecture-diagram.md
+  3. Tham khảo README.md
+
+====================================================
+

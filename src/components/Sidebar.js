@@ -5,7 +5,7 @@ import RequestList from './RequestList';
 import CreateGroupModal from './CreateGroupModal';
 import '../styles/Sidebar.css';
 
-function Sidebar({ selectedChat, onSelectChat, activeTab, onTabChange, onShowProfile, onShowFriendOrGroupProfile }) {
+function Sidebar({ selectedChat, onSelectChat, activeTab, onTabChange, onShowProfile, onShowFriendOrGroupProfile, currentUser }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateGroup, setShowCreateGroup] = useState(false);
 
@@ -59,6 +59,7 @@ function Sidebar({ selectedChat, onSelectChat, activeTab, onTabChange, onShowPro
             selectedChat={selectedChat}
             onSelectChat={onSelectChat}
             searchQuery={searchQuery}
+            currentUser={currentUser}
           />
         )}
         {activeTab === 'friends' && (

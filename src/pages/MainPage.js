@@ -46,6 +46,7 @@ function MainPage({ currentUser, onLogout }) {
           setProfileChat(chat);
           setShowFriendOrGroupProfile(true);
         }}
+        currentUser={currentUser}
       />
       
       <div className="main-content">
