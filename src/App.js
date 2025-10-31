@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import LoginPage from './pages/LoginPage';
 import MainPage from './pages/MainPage';
+import callPython from './callApiPython';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -14,6 +15,7 @@ function App() {
   const handleLogout = () => {
     setCurrentUser(null);
     setIsLoggedIn(false);
+    callPython("logout", currentUser)
   };
 
   return (

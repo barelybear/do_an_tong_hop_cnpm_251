@@ -4,6 +4,7 @@ import FriendList from './FriendList';
 import RequestList from './RequestList';
 import CreateGroupModal from './CreateGroupModal';
 import '../styles/Sidebar.css';
+import callPython from '../callApiPython';
 
 function Sidebar({ currentUser, selectedChat, onSelectChat, activeTab, onTabChange }) {
   const [searchQuery, setSearchQuery] = useState('');

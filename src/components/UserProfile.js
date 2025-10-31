@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import '../styles/UserProfile.css';
+import callPython from '../callApiPython';
 
 function UserProfile({ currentUser, onClose, onLogout }) {
   const [isEditing, setIsEditing] = useState(false);

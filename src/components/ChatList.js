@@ -1,52 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/ChatList.css';
+import callPython from '../callApiPython';
 
 function ChatList({ selectedChat, onSelectChat, searchQuery }) {
-  // Mock data - sẽ thay thế bằng dữ liệu từ Firestore
-  const [chats] = useState([
-    {
-      id: 'chat1',
-      type: 'direct',
-      name: 'Nguyễn Hoàng',
-      lastMessage: 'Dự án của bạn tiến triển thế nào rồi?',
-      timestamp: '10:32 AM',
-      avatar: 'NH',
-      status: 'online',
-      unread: 0
-    },
-    {
-      id: 'chat2',
-      type: 'direct',
-      name: 'Phạm Thảo',
-      lastMessage: 'Hẹn gặp lại nhé!',
-      timestamp: 'Hôm qua',
-      avatar: 'PT',
-      status: 'offline',
-      unread: 0
-    },
-    {
-      id: 'chat3',
-      type: 'group',
-      name: 'Nhóm Dự Án',
-      lastMessage: 'Mai họp lúc 9h nhé',
-      timestamp: 'Hôm qua',
-      avatar: '👥',
-      unread: 2
-    },
-    {
-      id: 'chat4',
-      type: 'direct',
-      name: 'Lê Minh',
-      lastMessage: 'OK bạn!',
-      timestamp: '2 ngày trước',
-      avatar: 'LM',
-      status: 'offline',
-      unread: 0
+  const [chats, setChats] = useState([]);        // start empty
+  const [filteredChats, setFilteredChats] = useState([]);
+
+  useEffect(() => {
+    // Function to fetch the chat list from the API
+    async function fetchChats() {
+      try {
+        const res = await callPython({
+          function_name: "load_chat_list",
+          args: []
+        });
+
+        if (res && Array.isArray(res.output)) {
+          setChats(res.output);
+          // The filtering logic will be handled by the second useEffect
+        } else {
+          console.warn("⚠️ No chat list returned or the format is incorrect:", res);
+        }
+      } catch (error) {
+        console.error("Failed to fetch chats:", error);
+      }
     }
-  ]);
 
-  const [filteredChats, setFilteredChats] = useState(chats);
+    // Fetch the chat list immediately when the component mounts
+    fetchChats();
 
+    // Set up an interval to fetch the chat list every 10 seconds
+    const intervalId = setInterval(fetchChats, 10000); // 10000ms = 10 seconds
+
+    // Cleanup function: this will be called when the component unmounts
+    // to prevent memory leaks and unnecessary API calls.
+    return () => clearInterval(intervalId);
+  }, []); // The empty dependency array means this effect runs only once on mount
+
+  // This effect handles filtering the chats whenever the search query or the main chat list changes
   useEffect(() => {
     if (searchQuery) {
       setFilteredChats(
@@ -61,7 +52,7 @@ function ChatList({ selectedChat, onSelectChat, searchQuery }) {
 
   return (
     <div className="chat-list">
-      {filteredChats.map((chat) => (
+      {filteredChats.map(chat => (
         <div
           key={chat.id}
           className={`chat-item ${selectedChat?.id === chat.id ? 'selected' : ''}`}
@@ -78,6 +69,7 @@ function ChatList({ selectedChat, onSelectChat, searchQuery }) {
           <div className="chat-info">
             <div className="chat-header">
               <h3 className="chat-name">{chat.name}</h3>
+              {/* Note: The timestamp from Python's datetime might need formatting */}
               <span className="chat-time">{chat.timestamp}</span>
             </div>
             <div className="chat-preview">
@@ -97,4 +89,3 @@ function ChatList({ selectedChat, onSelectChat, searchQuery }) {
 }
 
 export default ChatList;
-

@@ -1,27 +1,7 @@
 import React, { useState } from 'react';
 import '../styles/LoginPage.css';
-
+import callPython from '../callApiPython';
 import { ca } from 'google-translate-api/languages';
-
-async function callPython({ function_name, args }) {
-  console.log("🔹 About to call Python backend...");
-  
-  try {
-    const res = await fetch("http://127.0.0.1:5000/api/process", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ function_name, args })
-    });
-    console.log("🔹 Fetch finished, got response:", res);
-    
-    const data = await res.json();
-    console.log("Python output:", data.output);
-    return data;
-  } catch (err) {
-    console.error("❌ Fetch failed:", err);
-  }
-}
-
 
 function LoginPage({ onLogin }) {
   const [isRegister, setIsRegister] = useState(false);
@@ -53,8 +33,12 @@ function LoginPage({ onLogin }) {
         return;
       }
 
-      const data = await callPython({function_name: "on_signup", args: [formData.username, formData.password, formData.gmail]});
+      const data = await callPython({function_name: "sign_up", args: [formData.username, formData.password, formData.gmail]});
       if (!data.output) {
+        if (data.running) {
+          alert('Loading... Vui lòng chờ.');
+          return;
+        }
         alert('Đăng ký thất bại tên đăng nhập hoặc gmail đã tồn tại. Vui lòng thử lại.');
         return;
       }
@@ -62,8 +46,13 @@ function LoginPage({ onLogin }) {
       alert('Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.');
       setIsRegister(false);
     } else {
-      const data = await callPython({function_name: "on_login", args: [formData.username, formData.password]});
+      console.log("Submitting login for", formData.username);
+      const data = await callPython({function_name: "login", args: [formData.username, formData.password]});
       if (!data.output) {
+        if (data.running) {
+          alert('Loading... Vui lòng chờ.');
+          return;
+        }
         alert('Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
         return;
       }

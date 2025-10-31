@@ -14,7 +14,6 @@ function createWindow() {
     minWidth: 1200,
     minHeight: 700,
   });
-  win.webContents.openDevTools();
   win.loadFile('dist/index.html');
 }
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/FriendList.css';
+import callPython from '../callApiPython';
 
 function FriendList({ searchQuery }) {
   // Mock data - sẽ thay thế bằng dữ liệu từ Firestore

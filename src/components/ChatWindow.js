@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import '../styles/ChatWindow.css';
+import callPython from '../callApiPython';
 
 function ChatWindow({ selectedChat, currentUser, onShowProfile }) {
   const [message, setMessage] = useState('');
@@ -9,32 +10,7 @@ function ChatWindow({ selectedChat, currentUser, onShowProfile }) {
   useEffect(() => {
     // Mock messages khi chọn chat
     if (selectedChat) {
-      setMessages([
-        {
-          id: 1,
-          sender: selectedChat.id === 'chat1' ? selectedChat.name : 'Me',
-          senderId: selectedChat.id === 'chat1' ? 'other' : 'me',
-          content: 'Chào bạn! Bạn có khỏe không?',
-          timestamp: '10:30 AM',
-          isFile: false
-        },
-        {
-          id: 2,
-          sender: 'Me',
-          senderId: 'me',
-          content: 'Chào! Mình khỏe, cảm ơn bạn 😊',
-          timestamp: '10:31 AM',
-          isFile: false
-        },
-        {
-          id: 3,
-          sender: selectedChat.name,
-          senderId: 'other',
-          content: 'Dự án của bạn tiến triển thế nào rồi?',
-          timestamp: '10:32 AM',
-          isFile: false
-        }
-      ]);
+      setMessages([callPython("load_message_user", currentUser.name, selectedChat.name)]);
     }
   }, [selectedChat]);
 

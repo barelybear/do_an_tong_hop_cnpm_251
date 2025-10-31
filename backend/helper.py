@@ -24,19 +24,24 @@ class Message:
 
 
 class User:
-    def __init__(self, username, password, gmail):
+    def __init__(self, username, password, gmail, bio = "", status = "online", last_active = None, avatar = None, ip_address = None, friends = [], groups =[], blocked_users = [], notifications=[], requests = []):
         self.username = username
         self.password = password
         self.gmail = gmail
-        self.friends = []
-        self.groups = []
-        self.status = "online"
-        self.avatar = None
-        self.bio = ""
-        self._ip_address = None
-        self.last_active = None
-        self.blocked_users = []
-        self.notifications = []
+        self.friends = friends
+        self.groups = groups
+        self.status = status
+        self.avatar = avatar
+        self.bio = bio
+        self._ip_address = ip_address
+        self.last_active = last_active
+        self.blocked_users = blocked_users
+        self.notifications = notifications
+        self.request = requests
+
+    def set_ip(self, ip):
+        self._ip_address = ip
+        return
 
     def add_friend(self, friend_username):
         if friend_username not in self.friends:
@@ -58,12 +63,14 @@ class User:
     def get_ip_user(self):
         return self._ip_address
     
+    def load_user(self):
+        self = function.load_user(self)
+    
 class Group:
-    def __init__(self, group_name, members):
+    def __init__(self, group_name, members, admins):
         self.group_name = group_name
         self.members = members  # List of usernames
-        self.messages = []
-        self.admins = []
+        self.admins = admins
 
     def add_member(self, username):
         if username not in self.members:
