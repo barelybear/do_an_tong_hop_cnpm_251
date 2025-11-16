@@ -1,43 +1,27 @@
 import React, { useState, useRef, useEffect } from 'react';
 import '../styles/ChatWindow.css';
-
-function ChatWindow({ selectedChat, onShowFriendOrGroupProfile, userLanguage = 'vi' }) {
+import { apiCall, formatTimestamp } from '../utils/api';
+function ChatWindow({ selectedChat, onShowFriendOrGroupProfile, userLanguage = 'vi', currentUser }) {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const messagesEndRef = useRef(null);
   const [contextMenu, setContextMenu] = useState(null);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [translatedMessages, setTranslatedMessages] = useState({});
-
+  // Cần thêm marker cho biết đây là group hay là user
+  // Tam thoi chua ap dung cho group
   useEffect(() => {
-    // Mock messages khi chọn chat
     if (selectedChat) {
-      setMessages([
-        {
-          id: 1,
-          sender: selectedChat.id === 'chat1' ? selectedChat.name : 'Me',
-          senderId: selectedChat.id === 'chat1' ? 'other' : 'me',
-          content: 'Chào bạn! Bạn có khỏe không?',
-          timestamp: '10:30 AM',
-          isFile: false
-        },
-        {
-          id: 2,
-          sender: 'Me',
-          senderId: 'me',
-          content: 'Chào! Mình khỏe, cảm ơn bạn 😊',
-          timestamp: '10:31 AM',
-          isFile: false
-        },
-        {
-          id: 3,
-          sender: selectedChat.name,
-          senderId: 'other',
-          content: 'Dự án của bạn tiến triển thế nào rồi?',
-          timestamp: '10:32 AM',
-          isFile: false
-        }
-      ]);
+      const result = apiCall('load_message_user', [selectedChat.name]).output;
+      if (Array.isArray(result)) {
+        setMessages(result);
+      } else if (result && typeof result === 'object') {
+        setMessages([result]);
+      } else {
+        setMessages([]);
+      }
+    } else {
+      setMessages([]);
     }
   }, [selectedChat]);
 
@@ -60,6 +44,9 @@ function ChatWindow({ selectedChat, onShowFriendOrGroupProfile, userLanguage = '
         timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
         isFile: false
       };
+      // Cần thêm logic để xử lý gửi fail
+      // Logic để gửi message, không gửi file
+      const res = apiCall("send_message_user", [selectedChat.name, message])
       setMessages([...messages, newMessage]);
       setMessage('');
     }

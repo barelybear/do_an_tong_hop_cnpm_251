@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/ChatList.css';
 import { apiCall, formatTimestamp } from '../utils/api';
-
+// D  
 function ChatList({ selectedChat, onSelectChat, searchQuery, currentUser }) {
   const [chats, setChats] = useState([]);
   const [filteredChats, setFilteredChats] = useState([]);
@@ -28,7 +28,7 @@ function ChatList({ selectedChat, onSelectChat, searchQuery, currentUser }) {
 
       try {
         setLoading(true);
-        const response = await apiCall('load_chat_list', []);
+        const response = await apiCall('load_chat_list', [currentUser.username]);
         
         if (response.status === 'success' && response.output) {
           // Format timestamps and process chat list
@@ -55,6 +55,36 @@ function ChatList({ selectedChat, onSelectChat, searchQuery, currentUser }) {
 
     loadChatList();
   }, [currentUser]);
+    // Background listener for message updates
+  useEffect(() => {
+    if (!currentUser || !currentUser.username) return;
+
+    let isRunning = true;
+
+    async function checkForNewMessages() {
+      try {
+        const response = await apiCall('listen_for_messages', currentUser.username);
+
+        // If backend says there's a change
+        if (response.status === 'success' && response.output === true) {
+          console.log('🔔 Detected new message — refreshing chat list...');
+          await loadChatList(); // call your existing loader
+        }
+      } catch (err) {
+        console.error('Error checking messages:', err);
+      }
+    }
+
+    const interval = setInterval(() => {
+      if (isRunning) checkForNewMessages();
+    }, 5000000);
+
+    return () => {
+      isRunning = false;
+      clearInterval(interval);
+    };
+  }, [currentUser]);
+
 
   // Filter chats based on search query
   useEffect(() => {

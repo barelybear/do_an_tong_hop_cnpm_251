@@ -8,6 +8,8 @@ app = Flask(__name__)
 CORS(app)
 # This dude is current user
 # These dude cant run while something is running
+cache_chat_list = []
+cache_chat_wind = []
 forbidden_during_running = ["login", "sign_up", "log_out"]
 running = False
 system = controller.SystemController(None).get_instance()
@@ -41,6 +43,7 @@ def call_function(function_name, *args):
         system.group_manager,
         system.notification_manager,
         system.ui_manager,  # legacy
+        system.listener
     ]
 
     func = None
@@ -57,11 +60,12 @@ def call_function(function_name, *args):
     # --- call the function ---
     print(f"🟢 Calling {func} with args:", args)
     try:
-        if function_name == "load_chat_list":
-            res = func(system.current_user.username)
-        else:
-            res = func(*args)
-
+        print(system.current_user.username)
+        if function_name in ["load_message_user", "send_message_user"]:
+            print("Asdfadsfsd")
+            print(system.current_user.username)
+            res = func(system.current_user.username, *args)
+        else: res = func(*args)
         # update user if applicable
         if function_name in ['login', 'sign_up']:
             print("Loading current user")

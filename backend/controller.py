@@ -1,6 +1,6 @@
 import function
 import helper
-
+import listener
 class SystemController:
     def __init__(self, system_singleton):
         if system_singleton is None:
@@ -12,6 +12,7 @@ class SystemController:
             self.notification_manager = NotificationManager()
             self.ui_manager = UIManager()
             self.current_user = helper.User(None, None, None)
+            self.listener = Listener()
         else:
             self.auth = system_singleton.auth
             self.user_manager = system_singleton.user_manager
@@ -21,6 +22,7 @@ class SystemController:
             self.notification_manager = system_singleton.notification_manager
             self.ui_manager = system_singleton.ui_manager
             self.current_user = system_singleton.current_user
+            self.listener = system_singleton.listener
 
     def get_instance(self):
         return self
@@ -255,3 +257,42 @@ class UIManager:
         return function.open_image_popup(image_path)
     def play_video_stream(self, video_url):
         return function.play_video_stream(video_url)
+
+from pathlib import Path
+import firebase_admin
+from firebase_admin import credentials, firestore
+import function
+# ---------------- FIREBASE SETUP ----------------
+key_path = Path(__file__).resolve().parent.parent / "trans-chat-key.json"
+cred = credentials.Certificate(key_path)
+if not firebase_admin._apps:
+    firebase_admin.initialize_app(cred)
+db = firestore.client()
+
+# return true if there is changes
+class Listener:
+    def __init__(self):
+        pass
+    
+    def listen_for_messages(self, username):
+        db_ref = firestore.client().collection('users').document(username)
+        if db_ref.get().exists:
+            notifications = db_ref.get().to_dict().get('notifications', [])
+            if len(notifications) > 0:
+                function.clear_all_notifications(username)
+                return {"status": "success", "message": "Found changes.", "output": True, "running": False}
+            return {"status": "success", "message": "No change found.", "output": False, "running": False}
+        return {"status": "error", "message": "Can not find user.", "output": False, "running": False}
+
+    def listen_for_message_in(self, username, chat, last_update):
+        user_exist = firestore.client().collection('users').document(username).get().exists
+        db_group = firestore.client().collection('groups').document(chat)
+        if  user_exist and firestore.client().collection('users').document(chat).get().exists: 
+            # get ref user chat
+            db_ref = function._get_or_create_chat_ref(username, chat)
+            tim = function.get_final_message_timestamp(db_ref.id)
+        elif not user_exist or not db_group.get().exists:
+            return {"status": "error", "message": "Can not find user.", "output": False, "running": False}
+        if tim > last_update:
+            return {"status": "success", "message": "Found changes.", "output": True, "running": False}
+        return {"status": "success", "message": "No change found.", "output": False, "running": False}

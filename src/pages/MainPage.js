@@ -14,7 +14,7 @@ function MainPage({ currentUser, onLogout }) {
   const [userLanguage, setUserLanguage] = useState(() => {
     return localStorage.getItem('userLanguage') || 'vi';
   });
-
+  
   // Listen for language changes from UserProfile
   useEffect(() => {
     const handleLanguageChange = () => {
@@ -48,11 +48,12 @@ function MainPage({ currentUser, onLogout }) {
         }}
         currentUser={currentUser}
       />
-      
+
       <div className="main-content">
         <ChatWindow
           selectedChat={selectedChat}
           userLanguage={userLanguage}
+          currentUser={currentUser}
           onShowFriendOrGroupProfile={(chat) => {
             setProfileChat(chat);
             setShowFriendOrGroupProfile(true);

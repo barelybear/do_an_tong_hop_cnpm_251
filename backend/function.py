@@ -207,34 +207,6 @@ def open_image_popup(image_path):
     label.image = tk_img
     label.pack(expand=True, fill="both")
 
-def play_video_stream(video_url):
-    """Stream video using VLC."""
-    instance = vlc.Instance()
-    player = instance.media_player_new()
-    media = instance.media_new(video_url)
-    player.set_media(media)
-
-    # Create popup window for video
-    video_popup = tk.Toplevel()
-    video_popup.title("Video Player")
-    video_popup.geometry("800x450")
-
-    # Embed VLC in Tkinter window
-    video_frame = tk.Frame(video_popup, bg="black")
-    video_frame.pack(fill="both", expand=True)
-    video_popup.update()
-
-    handle = video_frame.winfo_id()
-    player.set_hwnd(handle)  # Windows
-
-    player.play()
-
-    def on_close():
-        player.stop()
-        video_popup.destroy()
-
-    video_popup.protocol("WM_DELETE_WINDOW", on_close)
-
 def get_status_user(username):
     db_ref = firestore.client().collection('users').document(username)
     if db_ref.get().exists:
@@ -266,11 +238,11 @@ def _get_or_create_chat_ref(user1_username, user2_username):
 
 # --- Sending Functions ---
 
-def send_message_user(to_username, from_user, content):
+def send_message_user(from_user, to_username, content):
     print(f"Sending message to {to_username}: {content}")
     try:
         # 1. Get the reference to the main chat document
-        chat_ref = _get_or_create_chat_ref(from_user.username, to_username)
+        chat_ref = _get_or_create_chat_ref(from_user.username, to_username.username)
 
         # 2. Define the message data
         message_data = {
@@ -1138,3 +1110,4 @@ def load_blocked_user(user):
 def load_group_from_name(group_name):
     group = firestore.client().collection('groups').document(group_name).get().to_dict()
     return Group(group.get('group_name'), group.get('members', []), group.get('admins',[]))
+
