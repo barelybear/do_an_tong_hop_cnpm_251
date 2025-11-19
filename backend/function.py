@@ -947,6 +947,105 @@ def search_user_or_group(search_entry):
     print(f"No user or group found for {search_entry}")
     return (None, None)
 
+def search_users_by_pattern(search_query, current_user):
+    """
+    Search for users in Firebase by username or gmail pattern.
+    Returns list of users matching the search query.
+    """
+    try:
+        db = firestore.client()
+        search_lower = search_query.lower()
+        results = []
+        
+        # Get all users (Note: In production, consider pagination or limiting results)
+        users_ref = db.collection('users').stream()
+        
+        for user_doc in users_ref:
+            user_data = user_doc.to_dict()
+            username = user_data.get('username', '')
+            gmail = user_data.get('gmail', '')
+            
+            # Skip current user and blocked users
+            if username == current_user.username:
+                continue
+            if current_user.username in user_data.get('blocked_users', []):
+                continue
+            if username in current_user.blocked_users:
+                continue
+            
+            # Check if search query matches username or gmail
+            if (search_lower in username.lower() or 
+                search_lower in gmail.lower()):
+                results.append({
+                    'username': username,
+                    'gmail': gmail,
+                    'status': user_data.get('status', 'offline'),
+                    'avatar': user_data.get('avatar', username[:2].upper() if username else '?'),
+                    'bio': user_data.get('bio', '')
+                })
+        
+        return results
+    except Exception as e:
+        print(f"Error searching users: {e}")
+        return []
+
+def search_messages_in_chats(search_query, current_user):
+    """
+    Search for messages containing the search query across all user's chats.
+    Returns list of chat IDs that contain matching messages.
+    Includes both possible chat_id formats for direct chats.
+    """
+    try:
+        search_lower = search_query.lower()
+        matching_chat_ids = set()
+        
+        # Get all chats for the user
+        db_ref = firestore.client().collection('chat')
+        
+        # Search in direct chats
+        for friend in current_user.friends:
+            doc1 = f"{current_user.username}_{friend}"
+            doc2 = f"{friend}_{current_user.username}"
+            
+            # Check both possible document IDs
+            found_match = False
+            for chat_id in [doc1, doc2]:
+                chat_ref = db_ref.document(chat_id)
+                if chat_ref.get().exists:
+                    # Search in all messages of this chat
+                    messages_query = chat_ref.collection('conversation').stream()
+                    for msg_doc in messages_query:
+                        msg_data = msg_doc.to_dict()
+                        content = msg_data.get('content', '')
+                        if content and search_lower in content.lower():
+                            # Add both formats to ensure matching works regardless of which format is used
+                            matching_chat_ids.add(doc1)
+                            matching_chat_ids.add(doc2)
+                            found_match = True
+                            break
+                    if found_match:
+                        break  # Found a match, no need to check the other format
+        
+        # Search in group chats
+        for group_name in current_user.groups:
+            group_ref = firestore.client().collection('groups').document(group_name)
+            if group_ref.get().exists:
+                group_data = group_ref.get().to_dict()
+                if current_user.username in group_data.get('members', []):
+                    # Search in all messages of this group
+                    messages_query = group_ref.collection('conversation').stream()
+                    for msg_doc in messages_query:
+                        msg_data = msg_doc.to_dict()
+                        content = msg_data.get('content', '')
+                        if content and search_lower in content.lower():
+                            matching_chat_ids.add(group_name)
+                            break  # Found a match, no need to check more messages
+        
+        return list(matching_chat_ids)
+    except Exception as e:
+        print(f"Error searching messages in chats: {e}")
+        return []
+
 def log_out(user):
     db_ref = firestore.client().collection('users').document(user.username)
     if db_ref.get().exists:

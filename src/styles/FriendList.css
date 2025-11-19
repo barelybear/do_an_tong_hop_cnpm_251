@@ -13,7 +13,7 @@
 }
 
 .friend-item:hover {
-  background: var(--background);
+  background: var(--background-hover);
 }
 
 .friend-avatar {
@@ -70,19 +70,19 @@
   top: 100%;
   right: 0;
   margin-top: 4px;
-  background: var(--background, #ffffff);
-  border: 1px solid var(--border-color, #e0e0e0);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
   min-width: 200px;
   z-index: 1000;
   overflow: hidden;
 }
 
 .dark-mode .dropdown-menu {
-  background: var(--background, #1e1e1e);
-  border-color: var(--border-color, #333);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  background: var(--surface);
+  border-color: var(--border-color);
+  box-shadow: var(--shadow-lg);
 }
 
 .dropdown-item {
@@ -95,23 +95,15 @@
 }
 
 .dropdown-item:hover {
-  background: var(--background-hover, rgba(0, 0, 0, 0.05));
-}
-
-.dark-mode .dropdown-item:hover {
-  background: var(--background-hover, rgba(255, 255, 255, 0.1));
+  background: var(--background-hover);
 }
 
 .dropdown-item.danger {
-  color: #f44336;
+  color: var(--error);
 }
 
 .dropdown-item.danger:hover {
-  background: rgba(244, 67, 54, 0.1);
-}
-
-.dark-mode .dropdown-item.danger:hover {
-  background: rgba(244, 67, 54, 0.2);
+  background: var(--error-light);
 }
 
 .dropdown-icon {
@@ -129,7 +121,7 @@
 }
 
 .dropdown-item.danger > span:not(.dropdown-icon) {
-  color: #f44336;
+  color: var(--error);
 }
 
 .dropdown-divider {

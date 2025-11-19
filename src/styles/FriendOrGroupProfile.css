@@ -25,8 +25,8 @@
   align-items: center;
   justify-content: center;
   border-bottom: 1px solid var(--border-color);
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: var(--gradient-primary);
+  color: var(--text-inverse);
 }
 
 .friend-group-profile-sidebar .profile-header h2 {
@@ -218,7 +218,7 @@
 }
 
 .member-item:hover {
-  background: var(--background);
+  background: var(--background-hover);
 }
 
 .member-avatar {
@@ -279,7 +279,9 @@
 }
 
 .action-btn.secondary:hover {
-  background: var(--border-color);
+  background: var(--background-hover);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
 }
 
 .action-btn.danger {
@@ -290,7 +292,9 @@
 
 .action-btn.danger:hover {
   background: var(--error);
-  color: white;
+  color: var(--text-inverse);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .action-btn span:first-child {

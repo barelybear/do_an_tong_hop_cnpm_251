@@ -43,15 +43,18 @@
   cursor: pointer;
   border-bottom: 2px solid transparent;
   transition: all 0.2s;
+  position: relative;
 }
 
 .tab:hover {
   color: var(--primary-color);
+  background: var(--background-hover);
 }
 
 .tab.active {
   color: var(--primary-color);
   border-bottom-color: var(--primary-color);
+  font-weight: 600;
 }
 
 .search-bar {
@@ -65,12 +68,19 @@
   border: 1px solid var(--border-color);
   border-radius: 20px;
   font-size: 14px;
-  background: var(--background);
+  background: var(--background-hover);
+  transition: all 0.2s;
+}
+
+.search-bar input:hover {
+  border-color: var(--primary-light);
 }
 
 .search-bar input:focus {
   outline: none;
   border-color: var(--primary-color);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 .sidebar-content {

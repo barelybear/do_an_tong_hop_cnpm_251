@@ -47,7 +47,12 @@ function Sidebar({ selectedChat, onSelectChat, activeTab, onTabChange, onShowPro
       <div className="search-bar">
         <input
           type="text"
-          placeholder="Tìm kiếm..."
+          placeholder={
+            activeTab === 'chats' ? 'Tìm bạn bè, nhóm...' :
+            activeTab === 'friends' ? 'Tìm bạn bè hoặc bạn mới...' :
+            activeTab === 'requests' ? 'Tìm tên bạn bè, nhóm...' :
+            'Tìm kiếm...'
+          }
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -67,10 +72,11 @@ function Sidebar({ selectedChat, onSelectChat, activeTab, onTabChange, onShowPro
             searchQuery={searchQuery}
             onSelectChat={onSelectChat}
             onShowFriendOrGroupProfile={onShowFriendOrGroupProfile}
+            currentUser={currentUser}
           />
         )}
         {activeTab === 'requests' && (
-          <RequestList />
+          <RequestList searchQuery={searchQuery} />
         )}
       </div>
 

@@ -11,18 +11,35 @@ function ChatWindow({ selectedChat, onShowFriendOrGroupProfile, userLanguage = '
   // Cần thêm marker cho biết đây là group hay là user
   // Tam thoi chua ap dung cho group
   useEffect(() => {
-    if (selectedChat) {
-      const result = apiCall('load_message_user', [selectedChat.name]).output;
-      if (Array.isArray(result)) {
-        setMessages(result);
-      } else if (result && typeof result === 'object') {
-        setMessages([result]);
+    const loadMessages = async () => {
+      if (selectedChat) {
+        try {
+          const response = await apiCall('load_message_user', [selectedChat.name]);
+          console.log('Load messages response:', response); // Debug log
+          
+          if (response && response.status === 'success' && response.output) {
+            const result = response.output;
+            if (Array.isArray(result)) {
+              setMessages(result);
+            } else if (result && typeof result === 'object') {
+              setMessages([result]);
+            } else {
+              setMessages([]);
+            }
+          } else {
+            console.error('Failed to load messages:', response);
+            setMessages([]);
+          }
+        } catch (error) {
+          console.error('Error loading messages:', error);
+          setMessages([]);
+        }
       } else {
         setMessages([]);
       }
-    } else {
-      setMessages([]);
-    }
+    };
+    
+    loadMessages();
   }, [selectedChat]);
 
   useEffect(() => {
@@ -33,22 +50,47 @@ function ChatWindow({ selectedChat, onShowFriendOrGroupProfile, userLanguage = '
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
     if (message.trim() && selectedChat) {
-      const newMessage = {
-        id: messages.length + 1,
+      const messageContent = message.trim();
+      const currentMessages = messages; // Save current messages
+      setMessage(''); // Clear input immediately for better UX
+      
+      // Optimistically add message to UI
+      const tempMessage = {
+        id: `temp-${Date.now()}`,
         sender: 'Me',
         senderId: 'me',
-        content: message,
+        content: messageContent,
         timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
         isFile: false
       };
-      // Cần thêm logic để xử lý gửi fail
-      // Logic để gửi message, không gửi file
-      const res = apiCall("send_message_user", [selectedChat.name, message])
-      setMessages([...messages, newMessage]);
-      setMessage('');
+      setMessages([...currentMessages, tempMessage]);
+      
+      try {
+        // Send message to backend
+        const res = await apiCall("send_message_user", [selectedChat.name, messageContent]);
+        console.log('Send message response:', res); // Debug log
+        
+        if (res && res.status === 'success') {
+          // Reload messages from server to get the actual message with correct ID and timestamp
+          const response = await apiCall('load_message_user', [selectedChat.name]);
+          if (response && response.status === 'success' && response.output) {
+            setMessages(response.output);
+          }
+        } else {
+          // If send failed, remove the optimistic message
+          setMessages(currentMessages);
+          setMessage(messageContent); // Restore message
+          console.error('Failed to send message:', res);
+        }
+      } catch (error) {
+        console.error('Error sending message:', error);
+        // Remove optimistic message on error
+        setMessages(currentMessages);
+        setMessage(messageContent); // Restore message
+      }
     }
   };
 

@@ -60,24 +60,54 @@ def call_function(function_name, *args):
     # --- call the function ---
     print(f"🟢 Calling {func} with args:", args)
     try:
-        print(system.current_user.username)
+        # Check if current_user exists before accessing username
+        if system.current_user and hasattr(system.current_user, 'username'):
+            print(f"Current user: {system.current_user.username}")
+        else:
+            print("No current user logged in")
+        
         if function_name in ["load_message_user", "send_message_user"]:
-            print("Asdfadsfsd")
-            print(system.current_user.username)
+            if not system.current_user or not hasattr(system.current_user, 'username'):
+                running = False
+                return {"status": "error", "message": "User not logged in", "output": False, "running": False}
+            print(f"Using current user: {system.current_user.username}")
             res = func(system.current_user.username, *args)
-        else: res = func(*args)
+        elif function_name in ["search_users", "search_messages_in_chats"]:
+            if not system.current_user or not hasattr(system.current_user, 'username'):
+                running = False
+                return {"status": "error", "message": "User not logged in", "output": [], "running": False}
+            print(f"Searching with current user: {system.current_user.username}")
+            res = func(system.current_user.username, *args)
+        elif function_name == 'log_out':
+            # For logout, pass current_user object if exists
+            if system.current_user and hasattr(system.current_user, 'username'):
+                res = func(system.current_user)
+                # Clear current_user after successful logout
+                if res and res.get("status") == "success":
+                    system.current_user = None
+                    print("Current user cleared after logout")
+            else:
+                res = {"status": "error", "message": "No user logged in", "output": False, "running": False}
+        else:
+            res = func(*args)
+        
         # update user if applicable
-        if function_name in ['login', 'sign_up']:
-            print("Loading current user")
-            print(res.get("username"))
-            system.current_user = function.load_user(res.get("username"))
-            print("Loaded")
+        if function_name == 'login':
+            if res and res.get("status") == "success" and res.get("username"):
+                print("Loading current user")
+                print(res.get("username"))
+                system.current_user = function.load_user(res.get("username"))
+                print("Loaded")
+        # Note: sign_up doesn't set current_user - user needs to login separately
+        
         running = False
         return res
 
     except Exception as e:
-        print("❌ Error while calling login:")
+        print(f"❌ Error while calling {function_name}:")
         traceback.print_exc()
+        running = False  # Always reset running flag on error
+        return {"status": "error", "message": str(e), "output": False, "running": False}
 
 # def on_login(username, password):
 #     global running

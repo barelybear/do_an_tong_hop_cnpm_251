@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../styles/RequestList.css';
 
-function RequestList() {
+function RequestList({ searchQuery = '' }) {
   const [requests, setRequests] = useState([
     {
       id: 'req1',
@@ -37,6 +37,29 @@ function RequestList() {
     }
   ]);
 
+  const [filteredRequests, setFilteredRequests] = useState(requests);
+
+  // Filter requests based on search query
+  useEffect(() => {
+    if (searchQuery) {
+      const queryLower = searchQuery.toLowerCase();
+      setFilteredRequests(
+        requests.filter(request => {
+          if (request.type === 'group') {
+            // Search in group name or inviter name
+            return (request.groupName && request.groupName.toLowerCase().includes(queryLower)) ||
+                   (request.inviterName && request.inviterName.toLowerCase().includes(queryLower));
+          } else {
+            // Search in username
+            return request.username && request.username.toLowerCase().includes(queryLower);
+          }
+        })
+      );
+    } else {
+      setFilteredRequests(requests);
+    }
+  }, [searchQuery, requests]);
+
   const handleAccept = (requestId, type) => {
     // Xử lý chấp nhận lời mời
     setRequests(requests.filter(req => req.id !== requestId));
@@ -59,7 +82,7 @@ function RequestList() {
 
   return (
     <div className="request-list">
-      {requests.map((request) => (
+      {filteredRequests.map((request) => (
         <div key={request.id} className={`request-item ${request.type === 'group' ? 'group-request' : ''}`}>
           <div className="request-avatar">
             <div className={`avatar ${request.type === 'group' ? 'group' : ''}`}>
@@ -102,6 +125,9 @@ function RequestList() {
           </div>
         </div>
       ))}
+      {filteredRequests.length === 0 && requests.length > 0 && (
+        <div className="empty-state">Không tìm thấy lời mời</div>
+      )}
       {requests.length === 0 && (
         <div className="empty-state">Không có lời mời mới</div>
       )}

@@ -28,10 +28,14 @@ class SystemController:
         return self
 
     def log_out(self, user):
-        user = function.load_user(user)
-        if user:
-            return function.log_out(user)
-        return False
+        # user is already a User object from system.current_user
+        if user and hasattr(user, 'username'):
+            result = function.log_out(user)
+            if result:
+                return {"status": "success", "message": "User logged out", "output": True, "running": False}
+            else:
+                return {"status": "error", "message": "Failed to logout", "output": False, "running": False}
+        return {"status": "error", "message": "No user to logout", "output": False, "running": False}
 
 class AuthManager:
     def __init__(self):
@@ -108,6 +112,13 @@ class UserManager:
             return {"status": "success", "message": "User unblocked.", "output": True, "running": False}
         return {"status": "error", "message": "User unblock failed.", "output": False, "running": False}
     
+    def search_users(self, current_user, search_query):
+        current_user_obj = function.load_user(current_user)
+        if current_user_obj:
+            results = function.search_users_by_pattern(search_query, current_user_obj)
+            return {"status": "success", "output": results, "running": False}
+        return {"status": "error", "message": "User not found", "output": [], "running": False}
+    
 class ChatManager:
     def __init__(self):
         pass
@@ -139,6 +150,13 @@ class ChatManager:
             messages = function.load_messages_user(to_username, from_user_obj)
             return {"status": "success", "output": messages, "running": False}
         return {"status": "error", "message": "Failed to load message.", "output": [], "running": False}
+    
+    def search_messages_in_chats(self, current_user, search_query):
+        current_user_obj = function.load_user(current_user)
+        if current_user_obj:
+            matching_chat_ids = function.search_messages_in_chats(search_query, current_user_obj)
+            return {"status": "success", "output": matching_chat_ids, "running": False}
+        return {"status": "error", "message": "User not found", "output": [], "running": False}
     
     def load_message_group(self, group_name, from_user):
         from_user_obj = function.load_user(from_user)

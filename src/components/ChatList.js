@@ -86,13 +86,15 @@ function ChatList({ selectedChat, onSelectChat, searchQuery, currentUser }) {
   }, [currentUser]);
 
 
-  // Filter chats based on search query
+  // Filter chats based on search query - search in name only
   useEffect(() => {
     if (searchQuery) {
+      const queryLower = searchQuery.toLowerCase();
       setFilteredChats(
-        chats.filter(chat =>
-          chat.name.toLowerCase().includes(searchQuery.toLowerCase())
-        )
+        chats.filter(chat => {
+          const nameMatch = chat.name.toLowerCase().includes(queryLower);
+          return nameMatch;
+        })
       );
     } else {
       setFilteredChats(chats);

@@ -4,7 +4,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--gradient-primary);
 }
 
 .login-container {
@@ -14,10 +14,11 @@
 }
 
 .login-card {
-  background: white;
+  background: var(--surface);
   padding: 48px 40px;
-  border-radius: 16px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  border-radius: 20px;
+  box-shadow: var(--shadow-xl);
+  backdrop-filter: blur(10px);
 }
 
 .login-title {
@@ -51,18 +52,35 @@
   width: 100%;
   padding: 12px 16px;
   border: 2px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 15px;
-  transition: border-color 0.2s;
+  transition: all 0.2s;
+  background: var(--background-hover);
+}
+
+.form-group input:hover {
+  border-color: var(--primary-light);
 }
 
 .form-group input:focus {
   outline: none;
   border-color: var(--primary-color);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 .form-group input::placeholder {
   color: var(--text-light);
+}
+
+.form-group input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--border-color);
+}
+
+.form-group input:not(:disabled) {
+  cursor: text;
 }
 
 .forgot-password {

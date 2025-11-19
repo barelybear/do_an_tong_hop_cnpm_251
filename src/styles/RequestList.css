@@ -45,7 +45,7 @@
 }
 
 .group-request {
-  background: var(--background);
+  background: var(--background-hover);
 }
 
 .request-actions {
@@ -55,19 +55,22 @@
 }
 
 .btn-accept {
-  background: var(--primary-color);
-  color: white;
+  background: var(--gradient-primary);
+  color: var(--text-inverse);
   border: none;
   padding: 8px 16px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-accept:hover {
-  background: var(--primary-dark);
+  background: var(--gradient-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .btn-reject {
@@ -83,8 +86,9 @@
 }
 
 .btn-reject:hover {
-  background: var(--background);
+  background: var(--background-hover);
   border-color: var(--text-secondary);
+  color: var(--text-primary);
 }
 
 

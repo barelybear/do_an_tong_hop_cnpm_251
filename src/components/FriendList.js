@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import '../styles/FriendList.css';
+import { apiCall } from '../utils/api';
 
-function FriendList({ searchQuery, onSelectChat, onShowFriendOrGroupProfile }) {
+function FriendList({ searchQuery, onSelectChat, onShowFriendOrGroupProfile, currentUser }) {
   // Mock data - sẽ thay thế bằng dữ liệu từ Firestore
   const [friends] = useState([
     {
@@ -28,21 +29,58 @@ function FriendList({ searchQuery, onSelectChat, onShowFriendOrGroupProfile }) {
   ]);
 
   const [filteredFriends, setFilteredFriends] = useState(friends);
+  const [searchResults, setSearchResults] = useState([]); // Results from Firebase search
   const [openDropdownId, setOpenDropdownId] = useState(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState({});
   const dropdownRefs = useRef({});
 
+  // Search in existing friends list
   useEffect(() => {
     if (searchQuery) {
-      setFilteredFriends(
-        friends.filter(friend =>
-          friend.username.toLowerCase().includes(searchQuery.toLowerCase())
-        )
+      const queryLower = searchQuery.toLowerCase();
+      const localResults = friends.filter(friend =>
+        friend.username.toLowerCase().includes(queryLower) ||
+        friend.gmail.toLowerCase().includes(queryLower)
       );
+      setFilteredFriends(localResults);
+      
+      // Also search in Firebase for new users
+      if (currentUser && currentUser.username) {
+        const searchFirebase = async () => {
+          try {
+            const response = await apiCall('search_users', [searchQuery]);
+            if (response.status === 'success' && response.output) {
+              // Get list of existing friend usernames
+              const existingFriendUsernames = new Set(friends.map(f => f.username.toLowerCase()));
+              
+              // Format results and filter out existing friends
+              const formattedResults = response.output
+                .filter(user => !existingFriendUsernames.has(user.username.toLowerCase()))
+                .map(user => ({
+                  id: user.username,
+                  username: user.username,
+                  avatar: user.avatar || user.username.substring(0, 2).toUpperCase(),
+                  status: user.status || 'offline',
+                  gmail: user.gmail,
+                  isNewUser: true // Flag to indicate this is a new user, not in friends list
+                }));
+              setSearchResults(formattedResults);
+            }
+          } catch (error) {
+            console.error('Error searching users:', error);
+            setSearchResults([]);
+          }
+        };
+        
+        // Debounce search
+        const timeoutId = setTimeout(searchFirebase, 300);
+        return () => clearTimeout(timeoutId);
+      }
     } else {
       setFilteredFriends(friends);
+      setSearchResults([]);
     }
-  }, [searchQuery, friends]);
+  }, [searchQuery, friends, currentUser]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -120,8 +158,14 @@ function FriendList({ searchQuery, onSelectChat, onShowFriendOrGroupProfile }) {
     setOpenDropdownId(null);
   };
 
+  const handleAddFriend = (user) => {
+    // TODO: Implement add friend functionality
+    alert(`Gửi lời mời kết bạn đến ${user.username}`);
+  };
+
   return (
     <div className="friend-list">
+      {/* Existing friends */}
       {filteredFriends.map((friend) => (
         <div key={friend.id} className="friend-item">
           <div className="friend-avatar">
@@ -199,7 +243,46 @@ function FriendList({ searchQuery, onSelectChat, onShowFriendOrGroupProfile }) {
           </div>
         </div>
       ))}
-      {filteredFriends.length === 0 && (
+      {/* Search results from Firebase (new users) */}
+      {searchQuery && searchResults.length > 0 && (
+        <>
+          <div style={{ padding: '12px 20px', fontSize: '12px', fontWeight: 600, color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Kết quả tìm kiếm
+          </div>
+          {searchResults.map((user) => (
+            <div key={user.id} className="friend-item">
+              <div className="friend-avatar">
+                <div className="avatar">{user.avatar}</div>
+                {user.status && user.status !== 'hidden' && (
+                  <span className={`status-indicator ${user.status === 'online' ? 'online' : user.status === 'busy' ? 'busy' : 'offline'}`}></span>
+                )}
+              </div>
+              <div className="friend-info">
+                <h3 className="friend-name">{user.username}</h3>
+                <p className="friend-status">
+                  {user.status === 'online' ? '🟢 Online' : 
+                   user.status === 'busy' ? '🔴 Bận' : 
+                   user.status === 'hidden' ? '' : '⚫ Offline'}
+                </p>
+              </div>
+              <div className="friend-actions">
+                <button 
+                  className="btn-icon" 
+                  title="Kết bạn"
+                  onClick={() => handleAddFriend(user)}
+                  style={{ color: 'var(--primary-color)' }}
+                >
+                  ➕
+                </button>
+              </div>
+            </div>
+          ))}
+        </>
+      )}
+      {filteredFriends.length === 0 && !searchQuery && (
+        <div className="empty-state">Không có bạn bè</div>
+      )}
+      {filteredFriends.length === 0 && searchQuery && searchResults.length === 0 && (
         <div className="empty-state">Không tìm thấy bạn bè</div>
       )}
     </div>

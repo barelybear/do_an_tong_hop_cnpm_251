@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../styles/LoginPage.css';
 import { apiCall } from '../utils/api';
 
@@ -11,6 +11,18 @@ function LoginPage({ onLogin }) {
     confirmPassword: '',
     gmail: ''
   });
+
+  // Reset form when component mounts (e.g., after logout)
+  useEffect(() => {
+    setFormData({
+      username: '',
+      password: '',
+      confirmPassword: '',
+      gmail: ''
+    });
+    setIsRegister(false);
+    setLoading(false);
+  }, []);
 
   const handleChange = (e) => {
     setFormData({
@@ -40,9 +52,17 @@ function LoginPage({ onLogin }) {
         if (response.status === 'success' && response.output) {
           alert('Đăng ký thành công! Vui lòng đăng nhập.');
           setIsRegister(false);
-          setFormData({ ...formData, password: '', confirmPassword: '' });
+          // Keep username and gmail, only clear passwords
+          setFormData({ 
+            username: formData.username,
+            gmail: formData.gmail,
+            password: '', 
+            confirmPassword: '' 
+          });
+          setLoading(false);
         } else {
-          alert('Đăng ký thất bại. Vui lòng thử lại.');
+          alert(response.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+          setLoading(false);
         }
       } catch (error) {
         console.error('Registration error:', error);
@@ -95,7 +115,9 @@ function LoginPage({ onLogin }) {
                 placeholder="Nhập username"
                 value={formData.username}
                 onChange={handleChange}
+                disabled={loading}
                 required
+                autoFocus
               />
             </div>
 
@@ -108,6 +130,7 @@ function LoginPage({ onLogin }) {
                   placeholder="Nhập gmail"
                   value={formData.gmail}
                   onChange={handleChange}
+                  disabled={loading}
                   required
                 />
               </div>
@@ -121,6 +144,7 @@ function LoginPage({ onLogin }) {
                 placeholder="Nhập mật khẩu"
                 value={formData.password}
                 onChange={handleChange}
+                disabled={loading}
                 required
               />
             </div>
@@ -134,6 +158,7 @@ function LoginPage({ onLogin }) {
                   placeholder="Nhập lại mật khẩu"
                   value={formData.confirmPassword}
                   onChange={handleChange}
+                  disabled={loading}
                   required
                 />
               </div>
@@ -152,7 +177,17 @@ function LoginPage({ onLogin }) {
             <button
               type="button"
               className="btn-secondary"
-              onClick={() => setIsRegister(!isRegister)}
+              onClick={() => {
+                setIsRegister(!isRegister);
+                // Clear form when switching between login/register
+                setFormData({
+                  username: '',
+                  password: '',
+                  confirmPassword: '',
+                  gmail: ''
+                });
+              }}
+              disabled={loading}
             >
               {isRegister ? 'Đã có tài khoản? Đăng nhập' : 'Tạo tài khoản mới'}
             </button>

@@ -14,11 +14,11 @@
 }
 
 .chat-item:hover {
-  background: var(--background);
+  background: var(--background-hover);
 }
 
 .chat-item.selected {
-  background: #F0EFFF;
+  background: rgba(99, 102, 241, 0.08);
   border-left: 4px solid var(--primary-color);
 }
 
@@ -68,14 +68,15 @@
 }
 
 .unread-badge {
-  background: var(--primary-color);
-  color: white;
+  background: var(--gradient-primary);
+  color: var(--text-inverse);
   font-size: 12px;
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 10px;
   flex-shrink: 0;
   margin-left: 8px;
+  box-shadow: var(--shadow-sm);
 }
 
 
