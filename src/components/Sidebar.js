@@ -40,7 +40,7 @@ function Sidebar({ selectedChat, onSelectChat, activeTab, onTabChange, onShowPro
           className={`tab ${activeTab === 'requests' ? 'active' : ''}`}
           onClick={() => onTabChange('requests')}
         >
-          Lời mới
+          Lời mời
         </button>
       </div>
 
@@ -76,7 +76,7 @@ function Sidebar({ selectedChat, onSelectChat, activeTab, onTabChange, onShowPro
           />
         )}
         {activeTab === 'requests' && (
-          <RequestList searchQuery={searchQuery} />
+          <RequestList searchQuery={searchQuery} currentUser={currentUser} />
         )}
       </div>
 

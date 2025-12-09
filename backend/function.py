@@ -1163,6 +1163,23 @@ def load_chat_list(user):
     print(sorted_chat)
     return sorted_chat
 
+def load_friend_list(user):
+    db_ref = firestore.client().collection('chat')
+    return_val = []
+    for friend in user.friends:
+        db_ref = firestore.client().collection('users').document(friend)
+        if db_ref.get().exists:
+            friend_data = db_ref.get().to_dict()
+            friend_ele = {
+                "username": friend,
+                "avatar": friend_data.get('avatar', friend[:2].upper()),
+                "status": friend_data.get('status', 'offline'),
+                "bio": friend_data.get('bio', ''),
+                "gmail": friend_data.get('gmail', '')
+            }
+            return_val.append(friend_ele)
+    return return_val
+
 def load_user(username):
     user = User(username, None, None)
     db_ref = firestore.client().collection('users').document(username).get()
@@ -1184,14 +1201,34 @@ def load_user(username):
         return None
     return user
 
+def send_group_invite(from_username, to_username, group_name):
+    from_user_data = firestore.client().collection('users').document(from_username).get()
+    to_user_data = firestore.client().collection('users').document(to_username).get()
+    group_data = firestore.client().collection('groups').document(group_name).get()
+    if from_user_data.exists and to_user_data.exists and group_data.exists and to_username not in group_data.to_dict().get('members', []) and to_user_data not in from_user_data.to_dict().get('blocked_users', []) and from_user_data not in to_user_data.to_dict().get('blocked_users', []):
+        requests = to_user_data.to_dict().get('requests', [])
+        for req in requests:
+            if req[0] == from_username and req[2] == 'group' and req[5] == group_name:
+                print("Group invite already sent")
+                return True
+        requests.append([from_username, from_username, 'group', group_name[:2].upper(), str(firestore.SERVER_TIMESTAMP), group_name, len(group_data.to_dict().get('members', []))])
+        firestore.client().collection('users').document(to_username).update({
+            'requests': requests
+        })
+        return True
+    else:
+        print("User or group not found or you blocked this user.")
+        return False
+
 def send_friend_request(from_username, to_username):
-    from_user_data = firestore.client().collection('user').document(from_username).get()
-    to_user_data = firestore.client().collection('user').document(to_username).get()
+    from_user_data = firestore.client().collection('users').document(from_username).get()
+    print(from_username)
+    to_user_data = firestore.client().collection('users').document(to_username).get()
     if from_user_data.exists and to_user_data.exists and to_user_data not in from_user_data.to_dict().get('blocked_users', []) and from_user_data not in to_user_data.to_dict().get('blocked_users', []):
         requests = to_user_data.to_dict().get('requests', [])
         if from_username not in requests:
-            requests.append(from_username)
-            firestore.client().collection('user').document(to_username).update({
+            requests.append([from_username, from_username, 'friend', from_username[:2].upper(), str(firestore.SERVER_TIMESTAMP), '', ''])
+            firestore.client().collection('users').document(to_username).update({
                 'requests': requests
             })
             print("Friend request sent")
@@ -1200,13 +1237,21 @@ def send_friend_request(from_username, to_username):
         print("User or friend not found or you blocked this user.")
         return False
     
-def load_friend_request(user):
-    return firestore.client().collection('user').document(user.username).get().to_dict().get('requests', [])
+def load_request(user):
+    return firestore.client().collection('users').document(user.username).get().to_dict().get('requests', [])
 
 def load_blocked_user(user):
-    return firestore.client().collection('user').document(user.username).get().to_dict().get('blocked_users', [])
+    return firestore.client().collection('users').document(user.username).get().to_dict().get('blocked_users', [])
 
 def load_group_from_name(group_name):
     group = firestore.client().collection('groups').document(group_name).get().to_dict()
-    return Group(group.get('group_name'), group.get('members', []), group.get('admins',[]))
 
+
+def translate_message(messages, target_lang = 'vi'):
+    from deep_translator import GoogleTranslator
+    translator = GoogleTranslator(source='auto', target=target_lang)
+    translated_text = translator.translate(text=messages)
+    return translated_text
+
+def load_request(user):
+    return firestore.client().collection('users').document(user.username).get().to_dict().get('requests', [])

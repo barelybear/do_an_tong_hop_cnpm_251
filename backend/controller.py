@@ -118,6 +118,13 @@ class UserManager:
             results = function.search_users_by_pattern(search_query, current_user_obj)
             return {"status": "success", "output": results, "running": False}
         return {"status": "error", "message": "User not found", "output": [], "running": False}
+
+    def load_friend_list(self, user):
+        user = function.load_user(user)
+        if user:
+            friends_list = function.load_friends_list(user)
+            return {"status": "success", "output": friends_list, "running": False}
+        return {"status": "error", "output": [], "running": False}
     
 class ChatManager:
     def __init__(self):
@@ -164,7 +171,16 @@ class ChatManager:
             messages = function.load_messages_group(group_name, from_user_obj)
             return {"status": "success", "output": messages, "running": False}
         return {"status": "error", "message": "Failed to load message.", "output": [], "running": False}
-
+    
+    def send_friend_request(self, from_user, to_username):
+        if from_user and function.send_friend_request(from_user, to_username):
+             return {"status": "success", "message": "Friend request sent.", "output": True, "running": False}
+        return {"status": "error", "message": "Failed to send friend request.", "output": False, "running": False}
+    
+    def send_group_invite(self, from_user, to_username, group_name):
+        if from_user and function.send_group_invite(from_user, to_username, group_name):
+             return {"status": "success", "message": "Group invite sent.", "output": True, "running": False}
+        return {"status": "error", "message": "Failed to send group invite.", "output": False, "running": False}
 
 
     def translate_message(self, message, target_language):
@@ -268,6 +284,14 @@ class NotificationManager:
             return {"status": "success", "message": "All notifications cleared.", "output": True, "running": False}
         return {"status": "error", "message": "Failed to clear all notifications.", "output": False, "running": False}
 
+    def load_requests(self, user):
+        user = function.load_user(user)
+        if user:
+            requests = function.load_request(user)
+            return {"status": "success", "output": requests, "running": False}
+        return {"status": "error", "output": [], "running": False}
+
+
 class UIManager:
     def __init__(self):
         pass
@@ -286,6 +310,8 @@ cred = credentials.Certificate(key_path)
 if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 db = firestore.client()
+
+
 
 # return true if there is changes
 class Listener:
@@ -314,3 +340,4 @@ class Listener:
         if tim > last_update:
             return {"status": "success", "message": "Found changes.", "output": True, "running": False}
         return {"status": "success", "message": "No change found.", "output": False, "running": False}
+    
