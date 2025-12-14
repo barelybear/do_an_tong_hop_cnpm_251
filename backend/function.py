@@ -621,6 +621,7 @@ def clear_all_notifications(user):
         return False
 
 def add_friend(user, friend_username):
+    print(friend_username)
     db_ref = firestore.client().collection('users').document(user.username)
     friend_ref = firestore.client().collection('users').document(friend_username)
     if db_ref.get().exists and friend_ref.get().exists and friend_username not in db_ref.get().to_dict().get('blocked_users', []):
@@ -1163,7 +1164,7 @@ def load_chat_list(user):
     print(sorted_chat)
     return sorted_chat
 
-def load_friend_list(user):
+def load_friends_list(user):
     db_ref = firestore.client().collection('chat')
     return_val = []
     for friend in user.friends:
@@ -1202,43 +1203,124 @@ def load_user(username):
     return user
 
 def send_group_invite(from_username, to_username, group_name):
-    from_user_data = firestore.client().collection('users').document(from_username).get()
-    to_user_data = firestore.client().collection('users').document(to_username).get()
-    group_data = firestore.client().collection('groups').document(group_name).get()
-    if from_user_data.exists and to_user_data.exists and group_data.exists and to_username not in group_data.to_dict().get('members', []) and to_user_data not in from_user_data.to_dict().get('blocked_users', []) and from_user_data not in to_user_data.to_dict().get('blocked_users', []):
-        requests = to_user_data.to_dict().get('requests', [])
-        for req in requests:
-            if req[0] == from_username and req[2] == 'group' and req[5] == group_name:
-                print("Group invite already sent")
-                return True
-        requests.append([from_username, from_username, 'group', group_name[:2].upper(), str(firestore.SERVER_TIMESTAMP), group_name, len(group_data.to_dict().get('members', []))])
-        firestore.client().collection('users').document(to_username).update({
-            'requests': requests
-        })
-        return True
+    # Lấy dữ liệu user và group
+    from_user_data = db.collection('users').document(from_username).get()
+    to_user_doc_ref = db.collection('users').document(to_username)
+    to_user_data = to_user_doc_ref.get()
+    group_data = db.collection('groups').document(group_name).get()
+
+    # Khởi tạo tham chiếu đến subcollection 'requests' của người nhận
+    to_user_requests_subcollection = to_user_doc_ref.collection('requests')
+
+    # Kiểm tra điều kiện cơ bản
+    if (from_user_data.exists and
+        to_user_data.exists and
+        group_data.exists and
+        to_username not in group_data.to_dict().get('members', []) and
+        to_username not in from_user_data.to_dict().get('blocked_users', []) and
+        from_username not in to_user_data.to_dict().get('blocked_users', [])):
+        
+        # 1. Kiểm tra lời mời đã được gửi chưa (Query subcollection)
+        existing_invite_query = to_user_requests_subcollection.where('from_username', '==', from_username).where('type', '==', 'group').where('group_name', '==', group_name).limit(1).get()
+
+        if existing_invite_query:
+            print("Group invite already sent")
+            return True
+            
+        # 2. Gửi lời mời mới (Thêm Document vào Subcollection)
+        new_request = {
+            'to_username': to_username, # Vẫn giữ để làm đầy đủ metadata
+            'from_username': from_username,
+            'type': 'group',
+            'group_name': group_name,
+            'timestamp': firestore.SERVER_TIMESTAMP,
+            'group_member_count': len(group_data.to_dict().get('members', []))
+        }
+        
+        try:
+            # Lưu request vào subcollection 'requests' của document user 'to_username'
+            to_user_requests_subcollection.add(new_request) 
+            print(f"Group invite for '{group_name}' sent from '{from_username}' to '{to_username}'.")
+            return True
+        except Exception as e:
+            print(f"Error sending group invite: {e}")
+            return False
+
     else:
-        print("User or group not found or you blocked this user.")
+        print("User or group not found, user is already a member, or you blocked/are blocked by this user.")
         return False
 
 def send_friend_request(from_username, to_username):
-    from_user_data = firestore.client().collection('users').document(from_username).get()
+    # Lấy dữ liệu user
+    from_user_data = db.collection('users').document(from_username).get()
     print(from_username)
-    to_user_data = firestore.client().collection('users').document(to_username).get()
-    if from_user_data.exists and to_user_data.exists and to_user_data not in from_user_data.to_dict().get('blocked_users', []) and from_user_data not in to_user_data.to_dict().get('blocked_users', []):
-        requests = to_user_data.to_dict().get('requests', [])
-        if from_username not in requests:
-            requests.append([from_username, from_username, 'friend', from_username[:2].upper(), str(firestore.SERVER_TIMESTAMP), '', ''])
-            firestore.client().collection('users').document(to_username).update({
-                'requests': requests
-            })
-            print("Friend request sent")
-        return True
-    else:
-        print("User or friend not found or you blocked this user.")
-        return False
+    to_user_doc_ref = db.collection('users').document(to_username)
+    to_user_data = to_user_doc_ref.get()
     
+    # Khởi tạo tham chiếu đến subcollection 'requests' của người nhận
+    to_user_requests_subcollection = to_user_doc_ref.collection('requests')
+
+    # Kiểm tra điều kiện cơ bản
+    if (from_user_data.exists and 
+        to_user_data.exists and
+        to_username not in from_user_data.to_dict().get('blocked_users', []) and
+        from_username not in to_user_data.to_dict().get('blocked_users', [])):
+
+        # 1. Kiểm tra request đã được gửi chưa (Query subcollection)
+        existing_request_query = to_user_requests_subcollection.where('from_username', '==', from_username).where('type', '==', 'friend').limit(1).get()
+        
+        if existing_request_query:
+            print("Friend request already sent")
+            return True
+
+        # 2. Gửi request mới (Thêm Document vào Subcollection)
+        new_request = {
+            'to_username': to_username, # Vẫn giữ để làm đầy đủ metadata
+            'from_username': from_username,
+            'type': 'friend',
+            'timestamp': firestore.SERVER_TIMESTAMP,
+        }
+        
+        try:
+            # Lưu request vào subcollection 'requests' của document user 'to_username'
+            to_user_requests_subcollection.add(new_request)
+            print("Friend request sent")
+            return True
+        except Exception as e:
+            print(f"Error sending friend request: {e}")
+            return False
+
+    else:
+        print("User or friend not found or you blocked/are blocked by this user.")
+        return False
+
 def load_request(user):
-    return firestore.client().collection('users').document(user.username).get().to_dict().get('requests', [])
+    """
+    Tải tất cả các yêu cầu (friend requests, group invites) đang chờ 
+    dành cho người dùng được truyền vào từ subcollection 'requests'.
+    """
+    try:
+        username = user.username
+    except AttributeError:
+        # Giả định user là username string
+        username = str(user)
+    print(3231)
+    # Tham chiếu đến subcollection requests của user
+    requests_ref = db.collection('users').document(username).collection('requests')
+    
+    # Query collection con và sắp xếp theo timestamp giảm dần (mới nhất lên đầu)
+    requests_stream = requests_ref.order_by('timestamp', direction=firestore.Query.DESCENDING).stream()
+    requests_list = []
+    for doc in requests_stream:
+        # Lấy dữ liệu của request
+        request_data = doc.to_dict()
+        # THÊM request_id là ID của document subcollection
+        request_data['request_id'] = doc.id
+        
+        requests_list.append(request_data)
+        
+    # requests_list chứa: [{..., 'request_id': 'unique_firestore_id', ...}]
+    return requests_list
 
 def load_blocked_user(user):
     return firestore.client().collection('users').document(user.username).get().to_dict().get('blocked_users', [])
@@ -1253,5 +1335,3 @@ def translate_message(messages, target_lang = 'vi'):
     translated_text = translator.translate(text=messages)
     return translated_text
 
-def load_request(user):
-    return firestore.client().collection('users').document(user.username).get().to_dict().get('requests', [])

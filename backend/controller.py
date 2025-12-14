@@ -172,17 +172,6 @@ class ChatManager:
             return {"status": "success", "output": messages, "running": False}
         return {"status": "error", "message": "Failed to load message.", "output": [], "running": False}
     
-    def send_friend_request(self, from_user, to_username):
-        if from_user and function.send_friend_request(from_user, to_username):
-             return {"status": "success", "message": "Friend request sent.", "output": True, "running": False}
-        return {"status": "error", "message": "Failed to send friend request.", "output": False, "running": False}
-    
-    def send_group_invite(self, from_user, to_username, group_name):
-        if from_user and function.send_group_invite(from_user, to_username, group_name):
-             return {"status": "success", "message": "Group invite sent.", "output": True, "running": False}
-        return {"status": "error", "message": "Failed to send group invite.", "output": False, "running": False}
-
-
     def translate_message(self, message, target_language):
         res = function.translate_text(message, target_language)
         if res:
@@ -266,28 +255,22 @@ class GroupManager:
 class NotificationManager:
     def __init__(self):
         pass
-    def notify_user(self, user, from_user):
-        user = function.load_user(user)
-        if user and function.notify_user(user, from_user):
-             return {"status": "success", "message": "User notified.", "output": True, "running": False}
-        return {"status": "error", "message": "Failed to notify user.", "output": False, "running": False}
-        
-    def clear_notifications(self, user):
-        user = function.load_user(user)
-        if user and function.clear_notifications(user):
-            return {"status": "success", "message": "Notifications cleared.", "output": True, "running": False}
-        return {"status": "error", "message": "Failed to clear notifications.", "output": False, "running": False}
-
-    def clear_all_notifications(self, user):
-        user = function.load_user(user)
-        if user and function.clear_all_notifications(user):
-            return {"status": "success", "message": "All notifications cleared.", "output": True, "running": False}
-        return {"status": "error", "message": "Failed to clear all notifications.", "output": False, "running": False}
+    def send_friend_request(self, from_user, to_username):
+        if from_user and function.send_friend_request(from_user, to_username):
+             return {"status": "success", "message": "Friend request sent.", "output": True, "running": False}
+        return {"status": "error", "message": "Failed to send friend request.", "output": False, "running": False}
+    
+    def send_group_invite(self, from_user, to_username, group_name):
+        if from_user and function.send_group_invite(from_user, to_username, group_name):
+             return {"status": "success", "message": "Group invite sent.", "output": True, "running": False}
+        return {"status": "error", "message": "Failed to send group invite.", "output": False, "running": False}
 
     def load_requests(self, user):
         user = function.load_user(user)
         if user:
+            print("123")
             requests = function.load_request(user)
+            print("456")
             return {"status": "success", "output": requests, "running": False}
         return {"status": "error", "output": [], "running": False}
 

@@ -66,7 +66,7 @@ def call_function(function_name, *args):
         else:
             print("No current user logged in")
         
-        if function_name in ["load_message_user", "send_message_user"]:
+        if function_name in ["load_message_user", "send_message_user", "add_friend"]:
             if not system.current_user or not hasattr(system.current_user, 'username'):
                 running = False
                 return {"status": "error", "message": "User not logged in", "output": False, "running": False}
@@ -88,6 +88,8 @@ def call_function(function_name, *args):
                     print("Current user cleared after logout")
             else:
                 res = {"status": "error", "message": "No user logged in", "output": False, "running": False}
+        elif function_name == 'load_requests':# chữa cháy tạm thời
+            res = func(system.current_user.username)
         else:
             res = func(*args)
         
@@ -101,6 +103,7 @@ def call_function(function_name, *args):
         # Note: sign_up doesn't set current_user - user needs to login separately
         
         running = False
+        print(res)
         return res
 
     except Exception as e:
