@@ -33,6 +33,22 @@ cred = credentials.Certificate(key_path)
 if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 
+# ---------------- CACHE FOR PERFORMANCE ----------------
+# Simple in-memory cache for user data to reduce database queries
+_user_cache = {}
+_cache_timestamps = {}  # Track when cache entries were created
+CACHE_TTL_SECONDS = 30  # Cache time-to-live: 30 seconds
+
+def _clear_user_cache(username=None):
+    """Clear user cache. If username is provided, clear only that user. Otherwise clear all."""
+    global _user_cache, _cache_timestamps
+    if username:
+        _user_cache.pop(username, None)
+        _cache_timestamps.pop(username, None)
+    else:
+        _user_cache.clear()
+        _cache_timestamps.clear()
+
 def get_outbound_ip():
     """Get the local IP address used for outbound connections (non-loopback)."""
     try:
@@ -376,18 +392,25 @@ def send_file_group(to_groupname, from_user):
 
 # --- Loading Functions ---
 
-def load_messages_user(to_username, from_user):
+def load_messages_user(to_username, from_user, limit=50):
     """
     Loads messages for a one-on-one chat and formats them into a JSON list
     for front-end consumption.
+    Optimized: Only loads the most recent messages (default 50) for faster loading.
+    
+    Args:
+        to_username: Username of the other user in the chat
+        from_user: User object of the current user
+        limit: Maximum number of messages to load (default 50)
     """
     try:
         # Get the reference to the main chat document.
         # This helper ensures we look for the correct doc_id (e.g., 'user1_user2')
         chat_ref = _get_or_create_chat_ref(from_user.username, to_username)
 
-        # Query the 'conversation' sub-collection, ordering by timestamp
-        messages_query = chat_ref.collection('conversation').order_by('timestamp', direction='ASCENDING').stream()
+        # Query the 'conversation' sub-collection, ordering by timestamp DESCENDING
+        # and limit to most recent messages, then reverse to get chronological order
+        messages_query = chat_ref.collection('conversation').order_by('timestamp', direction='DESCENDING').limit(limit).stream()
 
         json_messages = []
         for msg_doc in messages_query:
@@ -420,17 +443,25 @@ def load_messages_user(to_username, from_user):
                 'isFile': msg_data.get('is_media', False)
             }
             json_messages.append(message_json)
-            
+        
+        # Reverse to get chronological order (oldest first)
+        json_messages.reverse()
         return json_messages
     
     except Exception as e:
         print(f"An error occurred loading messages for user {to_username}: {e}")
         return [] # Return an empty list on failure
 
-def load_messages_group(to_groupname, from_user):
+def load_messages_group(to_groupname, from_user, limit=50):
     """
     Loads messages for a group chat and formats them into a JSON list
     for front-end consumption.
+    Optimized: Only loads the most recent messages (default 50) for faster loading.
+    
+    Args:
+        to_groupname: Name of the group
+        from_user: User object of the current user
+        limit: Maximum number of messages to load (default 50)
     """
     try:
         db = firestore.client()
@@ -449,8 +480,9 @@ def load_messages_group(to_groupname, from_user):
             print("You are not a member of this group")
             return []
 
-        # Query the sub-collection, ordering by timestamp
-        messages_query = group_ref.collection('conversation').order_by('timestamp', direction='ASCENDING').stream()
+        # Query the sub-collection, ordering by timestamp DESCENDING
+        # and limit to most recent messages, then reverse to get chronological order
+        messages_query = group_ref.collection('conversation').order_by('timestamp', direction='DESCENDING').limit(limit).stream()
 
         json_messages = []
         for msg_doc in messages_query:
@@ -479,6 +511,8 @@ def load_messages_group(to_groupname, from_user):
             }
             json_messages.append(message_json)
 
+        # Reverse to get chronological order (oldest first)
+        json_messages.reverse()
         return json_messages
         
     except Exception as e:
@@ -577,6 +611,7 @@ def update_avatar(user):
             'avatar': upload
         })
         user.avatar = upload
+        _clear_user_cache(user.username)  # Clear cache after update
         print("Avatar updated")
         return True
     else:
@@ -590,6 +625,7 @@ def update_bio(user, new_bio):
             'bio': new_bio
         })
         user.bio = new_bio
+        _clear_user_cache(user.username)  # Clear cache after update
         print("Bio updated")
         return True
     else:
@@ -603,6 +639,7 @@ def set_user_status(user, new_status):
             'status': new_status
         })
         user.status = new_status
+        _clear_user_cache(user.username)  # Clear cache after update
         print("Status updated")
         return True
     else:
@@ -680,6 +717,7 @@ def add_friend(user, friend_username):
                 'friends': friends
             })
             user.friends = friends
+            _clear_user_cache(user.username)  # Clear cache after update
             print("Friend added")
         _get_or_create_chat_ref(user.username, friend_username)
         return True
@@ -724,6 +762,7 @@ def remove_friend(user, friend_username):
             'friends': user_friends
         })
         user.friends = user_friends
+        _clear_user_cache(user.username)  # Clear cache after update
         removed_from_user = True
         print(f"Removed {friend_username} from {user.username}'s friends list")
     
@@ -733,6 +772,7 @@ def remove_friend(user, friend_username):
         friend_ref.update({
             'friends': friend_friends
         })
+        _clear_user_cache(friend_username)  # Clear cache after update
         removed_from_friend = True
         print(f"Removed {user.username} from {friend_username}'s friends list")
     
@@ -802,6 +842,7 @@ def block_user(user, block_username):
             'blocked_users': blocked_users
         })
         user.blocked_users = blocked_users
+        _clear_user_cache(user.username)  # Clear cache after update
         print(f"User {block_username} blocked by {user.username}")
         print(f"Note: Friend relationship and messages are preserved (if they were friends)")
         return True
@@ -820,6 +861,7 @@ def unblock_user(user, unblock_username):
                 'blocked_users': blocked_users
             })
             user.blocked_users = blocked_users
+            _clear_user_cache(user.username)  # Clear cache after update
             print("User unblocked")
         return True
     else:
@@ -1147,13 +1189,19 @@ def search_user_or_group(search_entry):
     print(f"No user or group found for {search_entry}")
     return (None, None)
 
-def search_users_by_pattern(search_query, current_user):
+def search_users_by_pattern(search_query, current_user, limit=20):
     """
     Search for users in Firebase by username or gmail pattern.
     Returns list of users matching the search query.
     - Không hiện người đã chặn mình
     - Không hiện người mình đã chặn
     - Nếu không phải bạn bè và người đó đã chặn mình thì không hiện trong kết quả tìm kiếm
+    Optimized: Limits results to improve performance.
+    
+    Args:
+        search_query: Search pattern to match
+        current_user: User object of the current user
+        limit: Maximum number of results to return (default 20)
     """
     try:
         db = firestore.client()
@@ -1169,10 +1217,14 @@ def search_users_by_pattern(search_query, current_user):
         current_friends = current_user_obj.friends if hasattr(current_user_obj, 'friends') else []
         current_blocked = current_user_obj.blocked_users if hasattr(current_user_obj, 'blocked_users') else []
         
-        # Get all users (Note: In production, consider pagination or limiting results)
+        # Get all users with early exit when limit is reached
         users_ref = db.collection('users').stream()
         
         for user_doc in users_ref:
+            # Early exit if we've reached the limit
+            if len(results) >= limit:
+                break
+                
             user_data = user_doc.to_dict()
             username = user_data.get('username', '')
             gmail = user_data.get('gmail', '')
@@ -1322,102 +1374,239 @@ def translate_text(message, target_language):
         return message  # Return original text if translation fails
 
 def get_final_message_timestamp(chat):
-    db_ref = firestore.client().collection('chat').document(chat)
-    if db_ref.get().exists:
-        messages = db_ref.get().to_dict().get('messages', [])
-        if messages:
-            last_message = messages[-1]
-            return last_message.get('timestamp', datetime.min)
-    return datetime.min
+    """Get the timestamp of the last message in a chat by querying the conversation subcollection."""
+    try:
+        db_ref = firestore.client().collection('chat').document(chat)
+        if not db_ref.get().exists:
+            return datetime.min
+        
+        # Query the last message from subcollection (most efficient - only gets 1 document)
+        messages_query = db_ref.collection('conversation').order_by('timestamp', direction='DESCENDING').limit(1).stream()
+        for msg_doc in messages_query:
+            msg_data = msg_doc.to_dict()
+            fs_timestamp = msg_data.get('timestamp')
+            if fs_timestamp:
+                return fs_timestamp
+        return datetime.min
+    except Exception as e:
+        print(f"Error getting final message timestamp for {chat}: {e}")
+        return datetime.min
 
 def get_final_message_timestamp_group(group):
-    db_ref = firestore.client().collection('groups').document(group)
-    if db_ref.get().exists:
-        messages = db_ref.get().to_dict().get('messages', [])
-        if messages:
-            last_message = messages[-1]
-            return last_message.get('timestamp', datetime.min)
-    return datetime.min
+    """Get the timestamp of the last message in a group by querying the conversation subcollection."""
+    try:
+        db_ref = firestore.client().collection('groups').document(group)
+        if not db_ref.get().exists:
+            return datetime.min
+        
+        # Query the last message from subcollection (most efficient - only gets 1 document)
+        messages_query = db_ref.collection('conversation').order_by('timestamp', direction='DESCENDING').limit(1).stream()
+        for msg_doc in messages_query:
+            msg_data = msg_doc.to_dict()
+            fs_timestamp = msg_data.get('timestamp')
+            if fs_timestamp:
+                return fs_timestamp
+        return datetime.min
+    except Exception as e:
+        print(f"Error getting final message timestamp for group {group}: {e}")
+        return datetime.min
 
 def get_final_message_content(chat):
-    db_ref = firestore.client().collection('chat').document(chat)
-    if db_ref.get().exists:
-        messages = db_ref.get().to_dict().get('messages', [])
-        if messages:
-            last_message = messages[-1]
-            if last_message.get('is_media', True):
-                return f"[{last_message.get('media_type').capitalize()}]"
-            return last_message.get('content', 'Chưa có')
-    return 'Chưa có'
+    """Get the content of the last message in a chat by querying the conversation subcollection."""
+    try:
+        db_ref = firestore.client().collection('chat').document(chat)
+        if not db_ref.get().exists:
+            return 'Chưa có'
+        
+        # Query the last message from subcollection (most efficient - only gets 1 document)
+        messages_query = db_ref.collection('conversation').order_by('timestamp', direction='DESCENDING').limit(1).stream()
+        for msg_doc in messages_query:
+            msg_data = msg_doc.to_dict()
+            if msg_data.get('is_media', False):
+                media_type = msg_data.get('media_type', 'File')
+                return f"[{media_type.capitalize()}]"
+            return msg_data.get('content', 'Chưa có')
+        return 'Chưa có'
+    except Exception as e:
+        print(f"Error getting final message content for {chat}: {e}")
+        return 'Chưa có'
 
 def get_final_message_content_group(group):
-    db_ref = firestore.client().collection('groups').document(group)
-    if db_ref.get().exists:
-        messages = db_ref.get().to_dict().get('messages', [])
-        if messages:
-            last_message = messages[-1]
-            if last_message.get('is_media', True):
-                return f"[{last_message.get('media_type').capitalize()}]"
-            return last_message.get('content', '')
-    return ''
+    """Get the content of the last message in a group by querying the conversation subcollection."""
+    try:
+        db_ref = firestore.client().collection('groups').document(group)
+        if not db_ref.get().exists:
+            return ''
+        
+        # Query the last message from subcollection (most efficient - only gets 1 document)
+        messages_query = db_ref.collection('conversation').order_by('timestamp', direction='DESCENDING').limit(1).stream()
+        for msg_doc in messages_query:
+            msg_data = msg_doc.to_dict()
+            if msg_data.get('is_media', False):
+                media_type = msg_data.get('media_type', 'File')
+                return f"[{media_type.capitalize()}]"
+            return msg_data.get('content', '')
+        return ''
+    except Exception as e:
+        print(f"Error getting final message content for group {group}: {e}")
+        return ''
 
 def load_chat_list(user):
-    db_ref = firestore.client().collection('chat')
+    """
+    Load chat list for a user, optimized to batch queries and minimize database calls.
+    """
+    db = firestore.client()
     chat_list = []
+    
+    # Load user statuses for all friends (optimized: only get status field)
+    friends_statuses = {}
+    if user.friends:
+        users_ref = db.collection('users')
+        for friend in user.friends:
+            friend_doc = users_ref.document(friend).get()
+            if friend_doc.exists:
+                friends_statuses[friend] = friend_doc.to_dict().get('status', 'offline')
+            else:
+                friends_statuses[friend] = 'offline'
+    
+    # Process direct chats
+    chat_ref = db.collection('chat')
     for chat in user.friends:
         doc1 = f"{user.username}_{chat}"
         doc2 = f"{chat}_{user.username}"
-        print(doc1)
-        print(doc2)
-        if db_ref.document(doc1).get().exists:
+        
+        # Check both possible document IDs
+        chat_doc_ref = None
+        chat_id = None
+        if chat_ref.document(doc1).get().exists:
+            chat_doc_ref = chat_ref.document(doc1)
+            chat_id = doc1
+        elif chat_ref.document(doc2).get().exists:
+            chat_doc_ref = chat_ref.document(doc2)
+            chat_id = doc2
+        
+        if chat_doc_ref:
+            # Get last message in one query
+            last_msg_query = chat_doc_ref.collection('conversation').order_by('timestamp', direction='DESCENDING').limit(1).stream()
+            last_message_content = 'Chưa có'
+            last_timestamp = datetime.min
+            
+            for msg_doc in last_msg_query:
+                msg_data = msg_doc.to_dict()
+                fs_timestamp = msg_data.get('timestamp')
+                if fs_timestamp:
+                    last_timestamp = fs_timestamp
+                    if msg_data.get('is_media', False):
+                        media_type = msg_data.get('media_type', 'File')
+                        last_message_content = f"[{media_type.capitalize()}]"
+                    else:
+                        last_message_content = msg_data.get('content', 'Chưa có')
+                break
+            
             chat_ele = {
-                        "id": f"{user.username}_{chat}",
-                        "type": 'direct',
-                        "name": chat,
-                        "lastMessage": get_final_message_content(doc1),
-                        "timestamp": get_final_message_timestamp(doc1),
-                        "avatar": 'JD', # placeholder for real avatar url
-                        "status": get_status_user(chat),
-                        "unread": 0
-                    }
+                "id": chat_id,
+                "type": 'direct',
+                "name": chat,
+                "lastMessage": last_message_content,
+                "timestamp": last_timestamp,
+                "avatar": chat[:2].upper() if chat else '?',  # Generate avatar from name
+                "status": friends_statuses.get(chat, 'offline'),
+                "unread": 0
+            }
             chat_list.append(chat_ele)
-        elif db_ref.document(doc2).get().exists:
-            chat_ele = {
-                        "id": f"{chat}_{user.username}",
-                        "type": 'direct',
-                        "name": chat,
-                        "lastMessage": get_final_message_content(doc2),
-                        "timestamp": get_final_message_timestamp(doc2),
-                        "avatar": 'JD', # placeholder for real avatar url
-                        "status": get_status_user(chat),
-                        "unread": 0
-                    }
-            chat_list.append(chat_ele)
-    for group in user.groups:
-        group_ref = firestore.client().collection('groups').document(group)
-        if group_ref.get().exists:
-            group_data = group_ref.get().to_dict()
-            if user.username in group_data.get('members', []):
-                group_ele = {
-                    "id": group,
-                    "type": 'group',
-                    "name": group,
-                    "lastMessage": get_final_message_content_group(group),
-                    "timestamp": get_final_message_timestamp_group(group),
-                    "avatar": 'GR', # placeholder for real avatar url
-                    "status": 'group',
-                    "unread": 0
-                }
-                chat_list.append(group_ele)
+    
+    # Process group chats
+    if user.groups:
+        groups_ref = db.collection('groups')
+        
+        for group in user.groups:
+            group_doc = groups_ref.document(group).get()
+            if not group_doc.exists:
+                continue
+                
+            group_data = group_doc.to_dict()
+            if user.username not in group_data.get('members', []):
+                continue
+            
+            # Get last message in one query
+            group_ref = groups_ref.document(group)
+            last_msg_query = group_ref.collection('conversation').order_by('timestamp', direction='DESCENDING').limit(1).stream()
+            last_message_content = ''
+            last_timestamp = datetime.min
+            
+            for msg_doc in last_msg_query:
+                msg_data = msg_doc.to_dict()
+                fs_timestamp = msg_data.get('timestamp')
+                if fs_timestamp:
+                    last_timestamp = fs_timestamp
+                    if msg_data.get('is_media', False):
+                        media_type = msg_data.get('media_type', 'File')
+                        last_message_content = f"[{media_type.capitalize()}]"
+                    else:
+                        last_message_content = msg_data.get('content', '')
+                break
+            
+            group_ele = {
+                "id": group,
+                "type": 'group',
+                "name": group,
+                "lastMessage": last_message_content,
+                "timestamp": last_timestamp,
+                "avatar": 'GR',  # placeholder for real avatar url
+                "status": 'group',
+                "unread": 0
+            }
+            chat_list.append(group_ele)
 
-    sorted_chat = sorted(chat_list, key=lambda x: x['timestamp'] if x['timestamp'] != datetime.min else datetime(1970, 1, 1), reverse=True)
-    # --- FORMAT THE TIMESTAMP BEFORE SENDING ---
+    # Helper function to get sortable timestamp value (convert to timestamp float for safe comparison)
+    def get_sortable_timestamp(ts):
+        """Convert timestamp to sortable float value, handling both naive and aware datetimes."""
+        if not isinstance(ts, datetime):
+            return 0.0  # Use 0.0 for missing timestamps
+        
+        # Check if it's the minimum datetime
+        try:
+            if ts == datetime.min:
+                return 0.0
+        except TypeError:
+            # If comparison fails (naive vs aware), treat as minimum
+            return 0.0
+        
+        # Convert to timestamp (seconds since epoch) for safe comparison
+        # This works for both timezone-aware and naive datetimes
+        try:
+            if ts.tzinfo is not None:
+                # Timezone-aware: convert to UTC timestamp
+                return ts.timestamp()
+            else:
+                # Timezone-naive: assume UTC and convert to timestamp
+                # Create a timezone-aware version in UTC
+                from datetime import timezone
+                ts_utc = ts.replace(tzinfo=timezone.utc)
+                return ts_utc.timestamp()
+        except (OSError, OverflowError, ValueError):
+            # Fallback for very old dates or invalid timestamps
+            return 0.0
+    
+    # Sort by timestamp (most recent first)
+    sorted_chat = sorted(chat_list, key=lambda x: get_sortable_timestamp(x['timestamp']), reverse=True)
+    
+    # Format the timestamp before sending
     for chat in sorted_chat:
         # Check if the timestamp is a datetime object
         if isinstance(chat['timestamp'], datetime):
             # Convert to ISO 8601 string format (e.g., "2025-10-31T15:30:00")
-            chat['timestamp'] = chat['timestamp'].isoformat() if chat['timestamp'] != datetime.min else ""
-    print(sorted_chat)
+            if chat['timestamp'] == datetime.min:
+                chat['timestamp'] = ""
+            else:
+                # Handle both timezone-aware and naive datetimes
+                if chat['timestamp'].tzinfo is not None:
+                    # Timezone-aware: convert to UTC then to ISO string
+                    chat['timestamp'] = chat['timestamp'].isoformat()
+                else:
+                    # Timezone-naive: convert directly to ISO string
+                    chat['timestamp'] = chat['timestamp'].isoformat()
+    
     return sorted_chat
 
 def load_friends_list(user):
@@ -1438,6 +1627,25 @@ def load_friends_list(user):
     return return_val
 
 def load_user(username):
+    """
+    Load user from database with caching to improve performance.
+    Cache expires after CACHE_TTL_SECONDS (30 seconds by default).
+    """
+    global _user_cache, _cache_timestamps
+    
+    # Check cache first
+    if username in _user_cache:
+        cache_time = _cache_timestamps.get(username, 0)
+        current_time = datetime.now().timestamp()
+        # Use cache if it's still valid (within TTL)
+        if current_time - cache_time < CACHE_TTL_SECONDS:
+            return _user_cache[username]
+        else:
+            # Cache expired, remove it
+            _user_cache.pop(username, None)
+            _cache_timestamps.pop(username, None)
+    
+    # Load from database
     user = User(username, None, None)
     db_ref = firestore.client().collection('users').document(username).get()
     if db_ref.exists:
@@ -1457,10 +1665,15 @@ def load_user(username):
         user.password = data.get('password')
         user.notifications = data.get('notifications', [])
         user.requests = data.get('requests', [])
+        
+        # Store in cache
+        _user_cache[username] = user
+        _cache_timestamps[username] = datetime.now().timestamp()
+        
+        return user
     else:
         print("User does not exist")
         return None
-    return user
 
 def send_group_invite(from_username, to_username, group_name):
     # Lấy dữ liệu user và group
