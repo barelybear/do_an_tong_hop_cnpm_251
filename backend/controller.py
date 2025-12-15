@@ -1,6 +1,7 @@
 import function
 import helper
 import listener
+from firebase_admin import firestore
 class SystemController:
     def __init__(self, system_singleton):
         if system_singleton is None:
@@ -77,8 +78,29 @@ class UserManager:
         user = function.load_user(user)             
         res = function.view_profile(user)
         if res is not None:
-            return {"status": "success", "message": "User profile found.", "ouput": True, "running": False, "is_user": False, "username": user.username, "password": user.password, "gmail": user.gmail, "bio": user.bio, "avatar": user.avatar, "status": user.status, "friends": user.friends, "groups": user.groups, "last_active": user.last_active, "blocked_users": user.blocked_users, "notifications": user.notifications}
-        return{"status": "error","message": "Failed to view profile of selected user.", "output": False, "running": False, "is_user": False}
+            # Trả về gmail gốc từ database, không mã hóa
+            gmail = res.gmail if res else user.gmail
+            print(f"Controller view_profile - returning gmail: {gmail}")
+            # Trả về response với api_status riêng và status là user status
+            return {
+                "api_status": "success",  # API response status
+                "status": res.status,  # User online status (online/busy/hidden/offline)
+                "message": "User profile found.", 
+                "ouput": True, 
+                "running": False, 
+                "is_user": False, 
+                "username": res.username, 
+                "password": res.password, 
+                "gmail": gmail,  # Gmail gốc từ database, không mã hóa
+                "bio": res.bio, 
+                "avatar": res.avatar, 
+                "friends": res.friends, 
+                "groups": res.groups, 
+                "last_active": res.last_active, 
+                "blocked_users": res.blocked_users, 
+                "notifications": res.notifications
+            }
+        return{"api_status": "error", "status": "error", "message": "Failed to view profile of selected user.", "output": False, "running": False, "is_user": False}
         
     def update_profile(self, user, new_bio):
         user = function.load_user(user)
@@ -141,17 +163,25 @@ class ChatManager:
     def __init__(self):
         pass
     def send_message_user(self, to_user, from_user, content):
-        # Assuming both need to be loaded as objects for the internal function
+        # Check if to_user is actually a group name
+        db = firestore.client()
+        group_ref = db.collection('groups').document(to_user)
+        if group_ref.get().exists:
+            # It's a group, use send_message_group instead
+            return self.send_message_group(to_user, from_user, content)
+        
+        # It's a user, proceed with send_message_user
         to_user_obj = function.load_user(to_user)
         from_user_obj = function.load_user(from_user)
-        if to_user_obj and from_user_obj and function.send_message_user(to_user_obj, from_user_obj, content):
+        # function.send_message_user expects: (from_user, to_username, content)
+        if to_user_obj and from_user_obj and function.send_message_user(from_user_obj, to_user_obj, content):
              return {"status": "success", "message": "Message sent.", "output": True, "running": False}
         return {"status": "error", "message": "Failed to send message.", "output": False, "running": False}
 
     def send_message_group(self, to_group, from_user, content):
         from_user_obj = function.load_user(from_user)
-        to_group_obj = function.load_group_from_name(to_group)
-        if from_user_obj and to_group_obj and function.send_message_group(to_group_obj, from_user_obj, content):
+        # function.send_message_group expects group_name (string) and from_user (User object)
+        if from_user_obj and function.send_message_group(to_group, from_user_obj, content):
             return {"status": "success", "message": "Message sent to group.", "output": True, "running": False}
         return {"status": "error", "message": "Failed to send message to group.", "output": False, "running": False}
 
@@ -163,6 +193,14 @@ class ChatManager:
             return {"status": "success", "output": chat_list, "running": False}
         return {"status": "error", "output": [], "running": False}
     def load_message_user(self, from_user, to_username):
+        # Check if to_username is actually a group name
+        db = firestore.client()
+        group_ref = db.collection('groups').document(to_username)
+        if group_ref.get().exists:
+            # It's a group, use load_message_group instead
+            return self.load_message_group(to_username, from_user)
+        
+        # It's a user, proceed with load_message_user
         from_user_obj = function.load_user(from_user)
         if from_user_obj:
             messages = function.load_messages_user(to_username, from_user_obj)
@@ -214,10 +252,17 @@ class GroupManager:
     def __init__(self):
         pass
     def create_group(self, group_name, members, admin_username):
-        # create_group typically takes strings and creates the objects internally, so keeping it simple unless advised otherwise.
-        group = function.create_group(group_name, members, admin_username) 
-        if group:
-            return {"status": "success", "message": "Group created.", "output": True, "running": False, "group_name": group.group_name, "members": group.members, "admins": group.admins}
+        # create_group returns (success, message, group) tuple
+        result = function.create_group(group_name, members, admin_username)
+        if isinstance(result, tuple):
+            success, message, group = result
+            if success and group:
+                return {"status": "success", "message": message, "output": True, "running": False, "group_name": group.group_name, "members": group.members, "admins": group.admins}
+            else:
+                return {"status": "error", "message": message, "output": False, "running": False}
+        # Backward compatibility: if function returns Group object directly
+        if result:
+            return {"status": "success", "message": "Group created.", "output": True, "running": False, "group_name": result.group_name, "members": result.members, "admins": result.admins}
         return {"status": "error", "message": "Failed to create group.", "output": False, "running": False}
 
     def leave_group(self, group_name_str, member_username):
@@ -270,6 +315,15 @@ class GroupManager:
             if res:
                 return {"status": "success", "message": "Admin demoted.", "output": True, "running": False, "group_name": res.group_name, "members": res.members, "admins": res.admins}
         return {"status": "error", "message": "Failed to demote admin.", "output": False, "running": False}
+
+    def disband_group(self, user, group_name_str):
+        user = function.load_user(user)
+        group = function.load_group_from_name(group_name_str)
+        if user and group:
+            res = function.disband_group(user, group)
+            if res:
+                return {"status": "success", "message": "Group disbanded.", "output": True, "running": False}
+        return {"status": "error", "message": "Failed to disband group.", "output": False, "running": False}
 
 class NotificationManager:
     def __init__(self):

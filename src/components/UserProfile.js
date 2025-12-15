@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import '../styles/UserProfile.css';
+import { apiCall } from '../utils/api';
 
 function UserProfile({ currentUser, onClose, onLogout }) {
   const profileRef = useRef(null);
@@ -14,11 +15,12 @@ function UserProfile({ currentUser, onClose, onLogout }) {
     return localStorage.getItem('userLanguage') || 'vi';
   });
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
-  const [profile] = useState({
+  const [profile, setProfile] = useState({
     username: currentUser.username,
     gmail: currentUser.gmail,
     bio: 'Always available 🚀'
   });
+  const [loading, setLoading] = useState(false);
 
   const handleLogoutClick = () => {
     if (window.confirm('Bạn có chắc chắn muốn đăng xuất?')) {
@@ -49,14 +51,67 @@ function UserProfile({ currentUser, onClose, onLogout }) {
     localStorage.setItem('darkMode', isDarkMode);
   }, [isDarkMode]);
 
+  // Load user profile when component mounts
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (!currentUser || !currentUser.username) return;
+      
+      try {
+        setLoading(true);
+        const response = await apiCall('view_profile', [currentUser.username]);
+        // Check if response is successful (has username field)
+        if (response && response.username) {
+          // Gmail được lấy trực tiếp từ database, không mã hóa
+          const gmail = response.gmail || currentUser.gmail || '';
+          console.log('Loaded gmail from server (original, not encoded):', gmail);
+          
+          setProfile({
+            username: response.username || currentUser.username,
+            gmail: gmail,  // Gmail gốc từ database, không mã hóa
+            bio: response.bio || 'Always available 🚀'
+          });
+          // Update status from server if available
+          // response.status là user online status, response.api_status là API response status
+          const userStatus = response.status;
+          if (userStatus && ['online', 'busy', 'hidden', 'offline'].includes(userStatus)) {
+            setStatus(userStatus);
+            localStorage.setItem('userStatus', userStatus);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading user profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUserProfile();
+  }, [currentUser]);
+
   useEffect(() => {
     localStorage.setItem('userStatus', status);
-    // TODO: Update status in real-time to server/Firebase
-  }, [status]);
+    // Update status to server
+    const updateStatus = async () => {
+      if (!currentUser || !currentUser.username) return;
+      
+      try {
+        const response = await apiCall('set_user_status', [currentUser.username, status]);
+        if (response.status === 'success') {
+          console.log('Status updated successfully');
+        } else {
+          console.error('Failed to update status:', response.message);
+        }
+      } catch (error) {
+        console.error('Error updating status:', error);
+      }
+    };
+
+    updateStatus();
+  }, [status, currentUser]);
 
   useEffect(() => {
     localStorage.setItem('userLanguage', language);
-    // TODO: Update language to server/Firebase
+    // Language preference is stored locally only
   }, [language]);
 
   const handleDarkModeToggle = (e) => {
@@ -96,7 +151,7 @@ function UserProfile({ currentUser, onClose, onLogout }) {
               {currentUser.username.substring(0, 2).toUpperCase()}
             </div>
           </div>
-          <h3 className="profile-name">Khải CaCa</h3>
+          <h3 className="profile-name">{profile.username}</h3>
           <p className="profile-status">{profile.bio}</p>
         </div>
 
@@ -146,7 +201,29 @@ function UserProfile({ currentUser, onClose, onLogout }) {
             </div>
           )}
           
-          <div className="profile-item">
+          <div 
+            className="profile-item clickable"
+            onClick={async () => {
+              const newBio = window.prompt('Nhập bio mới:', profile.bio);
+              if (newBio !== null && newBio !== profile.bio) {
+                try {
+                  setLoading(true);
+                  const response = await apiCall('update_profile', [currentUser.username, newBio]);
+                  if (response.status === 'success') {
+                    setProfile(prev => ({ ...prev, bio: newBio }));
+                    alert('Cập nhật bio thành công!');
+                  } else {
+                    alert('Cập nhật bio thất bại: ' + (response.message || 'Lỗi không xác định'));
+                  }
+                } catch (error) {
+                  console.error('Error updating bio:', error);
+                  alert('Có lỗi xảy ra khi cập nhật bio');
+                } finally {
+                  setLoading(false);
+                }
+              }
+            }}
+          >
             <span className="item-icon">✏️</span>
             <div className="item-content">
               <span className="item-label">Chỉnh sửa hồ sơ</span>

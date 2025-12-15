@@ -11,9 +11,16 @@ function MainPage({ currentUser, onLogout }) {
   const [showFriendOrGroupProfile, setShowFriendOrGroupProfile] = useState(false);
   const [profileChat, setProfileChat] = useState(null);
   const [activeTab, setActiveTab] = useState('chats'); // 'chats', 'friends', 'requests'
+  const [refreshKey, setRefreshKey] = useState(0);
   const [userLanguage, setUserLanguage] = useState(() => {
     return localStorage.getItem('userLanguage') || 'vi';
   });
+
+  const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1);
+    // Also clear selected chat if it was the one being modified
+    setSelectedChat(null);
+  };
   
   // Listen for language changes from UserProfile
   useEffect(() => {
@@ -47,6 +54,7 @@ function MainPage({ currentUser, onLogout }) {
           setShowFriendOrGroupProfile(true);
         }}
         currentUser={currentUser}
+        refreshKey={refreshKey}
       />
 
       <div className="main-content">
@@ -79,6 +87,7 @@ function MainPage({ currentUser, onLogout }) {
             chat={profileChat}
             currentUser={currentUser}
             onClose={() => setShowFriendOrGroupProfile(false)}
+            onRefresh={handleRefresh}
           />
         </>
       )}

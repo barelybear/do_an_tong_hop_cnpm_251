@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import '../styles/ChatList.css';
 import { apiCall, formatTimestamp } from '../utils/api';
 // D  
-function ChatList({ selectedChat, onSelectChat, searchQuery, currentUser }) {
+function ChatList({ selectedChat, onSelectChat, searchQuery, currentUser, refreshKey }) {
   const [chats, setChats] = useState([]);
   const [filteredChats, setFilteredChats] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -54,7 +54,7 @@ function ChatList({ selectedChat, onSelectChat, searchQuery, currentUser }) {
     };
 
     loadChatList();
-  }, [currentUser]);
+  }, [currentUser, refreshKey]);
     // Background listener for message updates
   useEffect(() => {
     if (!currentUser || !currentUser.username) return;

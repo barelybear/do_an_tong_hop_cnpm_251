@@ -241,6 +241,35 @@ def _get_or_create_chat_ref(user1_username, user2_username):
 def send_message_user(from_user, to_username, content):
     print(f"Sending message to {to_username}: {content}")
     try:
+        # Kiểm tra block cả hai chiều: người nhận chặn người gửi HOẶC người gửi chặn người nhận
+        db = firestore.client()
+        to_user_ref = db.collection('users').document(to_username.username)
+        from_user_ref = db.collection('users').document(from_user.username)
+        
+        if not to_user_ref.get().exists:
+            print(f"Recipient {to_username.username} not found")
+            return False
+        
+        if not from_user_ref.get().exists:
+            print(f"Sender {from_user.username} not found")
+            return False
+        
+        to_user_data = to_user_ref.get().to_dict()
+        from_user_data = from_user_ref.get().to_dict()
+        
+        to_blocked_users = to_user_data.get('blocked_users', [])
+        from_blocked_users = from_user_data.get('blocked_users', [])
+        
+        # Nếu người gửi bị người nhận chặn thì không cho gửi
+        if from_user.username in to_blocked_users:
+            print(f"Cannot send message: {to_username.username} has blocked {from_user.username}")
+            return False
+        
+        # Nếu người gửi đã chặn người nhận thì cũng không cho gửi
+        if to_username.username in from_blocked_users:
+            print(f"Cannot send message: {from_user.username} has blocked {to_username.username}")
+            return False
+        
         # 1. Get the reference to the main chat document
         chat_ref = _get_or_create_chat_ref(from_user.username, to_username.username)
 
@@ -330,7 +359,9 @@ def send_message_group(to_groupname, from_user, content):
         print("Message sent to group")
         for member in group_data.get('members', []):
             if member != from_user.username:
-                notify_user(user=member, from_username=from_user.username)
+                member_user = load_user(member)
+                if member_user:
+                    notify_user(user=member_user, from_username=from_user.username)
         return True
     except Exception as e:
         print(f"An error occurred sending group message: {e}")
@@ -367,12 +398,16 @@ def load_messages_user(to_username, from_user):
             if fs_timestamp is None:
                 continue
             
+            # Get the actual sender username from the message
+            actual_sender = msg_data.get('sender', '')
+            
             # Determine sender context ('me' or 'other')
-            is_current_user = msg_data.get('sender') == from_user.username
+            is_current_user = actual_sender == from_user.username
             sender_id = 'me' if is_current_user else 'other'
             
-            # The sender's display name
-            sender_name = 'Me' if is_current_user else to_username
+            # The sender's display name - use actual sender username, not to_username
+            # If it's the current user, show 'Me', otherwise show the actual sender username
+            sender_name = 'Me' if is_current_user else actual_sender
 
             message_json = {
                 # Use a unique, sortable ISO 8601 string for the ID
@@ -406,8 +441,11 @@ def load_messages_group(to_groupname, from_user):
             print("Group not found")
             return []
 
+        # Get group data once
+        group_data = group_doc.to_dict()
+        
         # Basic check to see if the user is a member
-        if from_user.username not in group_doc.to_dict().get('members', []):
+        if from_user.username not in group_data.get('members', []):
             print("You are not a member of this group")
             return []
 
@@ -451,14 +489,23 @@ def view_profile(user):
     db_ref = firestore.client().collection('users').document(user.username)
     if db_ref.get().exists:
         user_data = db_ref.get().to_dict()
+        # Lấy gmail trực tiếp từ database, không mã hóa
+        gmail = user_data.get('gmail', '')
+        print(f"View profile - gmail from database for {user.username}: {gmail}")
         selected_user = User(
             user_data['username'],
             user_data['password'],
-            user_data['gmail'],
-            user_data['bio'],
-            user_data['status'],
-            user_data['last_active'], user_data['avatar'],
-            user_data['ip_address'], user_data['friends'], user_data['groups'], user_data['blocked_users'], user_data['notifications'], user_data['requests']
+            gmail,  # Gmail gốc từ database, không mã hóa
+            user_data.get('bio', ''),
+            user_data.get('status', 'offline'),
+            user_data.get('last_active'), 
+            user_data.get('avatar'),
+            user_data.get('ip_address'), 
+            user_data.get('friends', []), 
+            user_data.get('groups', []), 
+            user_data.get('blocked_users', []), 
+            user_data.get('notifications', []), 
+            user_data.get('requests', [])
         )
         return selected_user
     else:
@@ -641,44 +688,126 @@ def add_friend(user, friend_username):
         return False
     
 def remove_friend(user, friend_username):
+    """
+    Remove friend: xóa bạn bè 2 chiều và xóa tất cả tin nhắn trước đó.
+    
+    Args:
+        user: User object của người thực hiện hủy kết bạn
+        friend_username: Username của người bạn cần xóa
+    """
     db_ref = firestore.client().collection('users').document(user.username)
-    if db_ref.get().exists:
-        user_data = db_ref.get().to_dict()
-        friends = user_data.get('friends', [])
-        if friend_username in friends:
-            friends.remove(friend_username)
-            db_ref.update({
-                'friends': friends
-            })
-            user.friends = friends
-            print("Friend removed")
-        return True
-    else:
+    friend_ref = firestore.client().collection('users').document(friend_username)
+    
+    if not db_ref.get().exists:
         print("User not found")
         return False
     
-def block_user(user, block_username):
-    db_ref = firestore.client().collection('users').document(user.username)
-    block_ref = firestore.client().collection('users').document(block_username)
-    if db_ref.get().exists and block_ref.get().exists:
-        user_data = db_ref.get().to_dict()
-        blocked_users = user_data.get('blocked_users', [])
-        friends = user_data.get('friends', [])
-        if block_username not in blocked_users:
-            blocked_users.append(block_username)
-            if block_username in friends:
-                friends.remove(block_username)
-            db_ref.update({
-                'blocked_users': blocked_users,
-                'friends': friends
-            })
-            user.blocked_users = blocked_users
-            user.friends = friends
-            print("User blocked")
+    if not friend_ref.get().exists:
+        print("Friend not found")
+        return False
+    
+    # Lấy danh sách bạn bè của cả 2 người
+    user_data = db_ref.get().to_dict()
+    friend_data = friend_ref.get().to_dict()
+    
+    user_friends = user_data.get('friends', [])
+    friend_friends = friend_data.get('friends', [])
+    
+    # Xóa bạn bè 2 chiều
+    removed_from_user = False
+    removed_from_friend = False
+    
+    # Xóa friend_username khỏi danh sách bạn bè của user
+    if friend_username in user_friends:
+        user_friends.remove(friend_username)
+        db_ref.update({
+            'friends': user_friends
+        })
+        user.friends = user_friends
+        removed_from_user = True
+        print(f"Removed {friend_username} from {user.username}'s friends list")
+    
+    # Xóa user.username khỏi danh sách bạn bè của friend
+    if user.username in friend_friends:
+        friend_friends.remove(user.username)
+        friend_ref.update({
+            'friends': friend_friends
+        })
+        removed_from_friend = True
+        print(f"Removed {user.username} from {friend_username}'s friends list")
+    
+    # Xóa tất cả tin nhắn giữa 2 người
+    # Tạo chat_id giống như trong _get_or_create_chat_ref
+    sorted_users = sorted([user.username, friend_username])
+    chat_id = f"{sorted_users[0]}_{sorted_users[1]}"
+    db = firestore.client()
+    chat_ref = db.collection('chat').document(chat_id)
+    
+    if chat_ref.get().exists:
+        try:
+            # Xóa tất cả messages trong subcollection 'conversation'
+            messages_ref = chat_ref.collection('conversation')
+            messages = messages_ref.stream()
+            
+            deleted_count = 0
+            for msg_doc in messages:
+                msg_doc.reference.delete()
+                deleted_count += 1
+            
+            # Xóa chat document (sẽ tự động xóa subcollection nếu còn)
+            chat_ref.delete()
+            print(f"Deleted chat document and {deleted_count} messages between {user.username} and {friend_username}")
+        except Exception as e:
+            print(f"Error deleting chat messages: {e}")
+            import traceback
+            traceback.print_exc()
+    else:
+        print(f"No chat document found between {user.username} and {friend_username}")
+    
+    if removed_from_user or removed_from_friend:
+        print(f"Friend relationship removed between {user.username} and {friend_username}")
         return True
     else:
-        print("User or block target not found")
+        print(f"{user.username} and {friend_username} are not friends")
         return False
+    
+def block_user(user, block_username):
+    """
+    Block user: chặn người dùng - không cho đối phương nhắn tin cho mình.
+    - Nếu là bạn bè: KHÔNG hủy kết bạn, KHÔNG xóa tin nhắn, vẫn giữ trong danh sách bạn bè
+    - Nếu không phải bạn bè: không cho đối phương search ra mình
+    
+    Args:
+        user: User object của người thực hiện block
+        block_username: Username của người bị block
+    """
+    db_ref = firestore.client().collection('users').document(user.username)
+    block_ref = firestore.client().collection('users').document(block_username)
+    
+    if not db_ref.get().exists:
+        print("User not found")
+        return False
+    
+    if not block_ref.get().exists:
+        print("Block target not found")
+        return False
+    
+    user_data = db_ref.get().to_dict()
+    blocked_users = user_data.get('blocked_users', [])
+    
+    # Thêm vào danh sách blocked nếu chưa có
+    if block_username not in blocked_users:
+        blocked_users.append(block_username)
+        db_ref.update({
+            'blocked_users': blocked_users
+        })
+        user.blocked_users = blocked_users
+        print(f"User {block_username} blocked by {user.username}")
+        print(f"Note: Friend relationship and messages are preserved (if they were friends)")
+        return True
+    else:
+        print(f"User {block_username} is already blocked by {user.username}")
+        return True
     
 def unblock_user(user, unblock_username):
     db_ref = firestore.client().collection('users').document(user.username)
@@ -701,22 +830,41 @@ def create_group(group_name, members, admin_username):
     db_ref = firestore.client().collection('groups').document(group_name)
     if db_ref.get().exists:
         print("Group name already exists")
-        return None
+        return (False, "Group name already exists", None)
     for member in members:
         member_ref = firestore.client().collection('users').document(member)
         if not member_ref.get().exists:
             print(f"Member {member} does not exist")
-            return None
+            return (False, f"Member {member} does not exist", None)
     if admin_username not in members:
         members.append(admin_username)
+    admins = [admin_username]
     db_ref.set({
         'group_name': group_name,
         'members': members,
-        'admins': [admin_username],
-        'messages': []
+        'admins': admins,
+        'messages': [],
+        'created_date': datetime.now().isoformat(),
+        'description': ''
     })
+    
+    # Update groups field for all members in Firestore
+    db = firestore.client()
+    for member_username in members:
+        user_ref = db.collection('users').document(member_username)
+        if user_ref.get().exists:
+            user_data = user_ref.get().to_dict()
+            user_groups = user_data.get('groups', [])
+            if group_name not in user_groups:
+                user_groups.append(group_name)
+                user_ref.update({
+                    'groups': user_groups
+                })
+                print(f"Updated groups for user {member_username}")
+    
     print("Group created")
-    return Group(group_name, members)
+    group = Group(group_name, members, admins)
+    return (True, "Group created successfully", group)
 
 def leave_group(user, group):
     db_ref = firestore.client().collection('groups').document(group.group_name)
@@ -732,8 +880,21 @@ def leave_group(user, group):
                 'members': members,
                 'admins': admins
             })
+            
+            # Update user's groups list in Firestore
+            user_ref = firestore.client().collection('users').document(user.username)
+            if user_ref.get().exists:
+                user_data = user_ref.get().to_dict()
+                user_groups = user_data.get('groups', [])
+                if group.group_name in user_groups:
+                    user_groups.remove(group.group_name)
+                    user_ref.update({
+                        'groups': user_groups
+                    })
+            
             user.groups = [g for g in user.groups if g != group.group_name]
-            group.remove_member(user.username)
+            if hasattr(group, 'remove_member'):
+                group.remove_member(user.username)
             print("Left group")
             return group
         else:
@@ -842,7 +1003,12 @@ def demote_admin_to_member(user, group, admin_username):
                         'admins': admins
                     })
                     print("Admin demoted to member")
-                    group.remove_admin(admin_username)
+                    if hasattr(group, 'demote_from_admin'):
+                        group.demote_from_admin(admin_username)
+                    else:
+                        # Fallback if method doesn't exist
+                        if admin_username in group.admins:
+                            group.admins.remove(admin_username)
                     return group
                 else:
                     print("You cannot demote yourself")
@@ -856,6 +1022,39 @@ def demote_admin_to_member(user, group, admin_username):
     else:
         print("Group not found")
         return None
+
+def disband_group(user, group):
+    """Disband (delete) a group. Only admins can disband."""
+    db_ref = firestore.client().collection('groups').document(group.group_name)
+    if db_ref.get().exists:
+        group_data = db_ref.get().to_dict()
+        admins = group_data.get('admins', [])
+        if user.username in admins:
+            # Remove group from all members' groups list
+            members = group_data.get('members', [])
+            db = firestore.client()
+            for member_username in members:
+                user_ref = db.collection('users').document(member_username)
+                if user_ref.get().exists:
+                    user_data = user_ref.get().to_dict()
+                    user_groups = user_data.get('groups', [])
+                    if group.group_name in user_groups:
+                        user_groups.remove(group.group_name)
+                        user_ref.update({
+                            'groups': user_groups
+                        })
+                        print(f"Removed group from user {member_username}")
+            
+            # Delete the group document
+            db_ref.delete()
+            print(f"Group {group.group_name} disbanded")
+            return True
+        else:
+            print("You are not an admin of this group")
+            return False
+    else:
+        print("Group not found")
+        return False
 
 def display_messages(frame, messages, open_image_popup, play_video_stream):
     """Render messages (text, images, videos) inside a Tkinter frame."""
@@ -952,11 +1151,23 @@ def search_users_by_pattern(search_query, current_user):
     """
     Search for users in Firebase by username or gmail pattern.
     Returns list of users matching the search query.
+    - Không hiện người đã chặn mình
+    - Không hiện người mình đã chặn
+    - Nếu không phải bạn bè và người đó đã chặn mình thì không hiện trong kết quả tìm kiếm
     """
     try:
         db = firestore.client()
         search_lower = search_query.lower()
         results = []
+        
+        # Load current user để lấy danh sách bạn bè và blocked users
+        current_user_obj = load_user(current_user.username)
+        if not current_user_obj:
+            print("Current user not found")
+            return []
+        
+        current_friends = current_user_obj.friends if hasattr(current_user_obj, 'friends') else []
+        current_blocked = current_user_obj.blocked_users if hasattr(current_user_obj, 'blocked_users') else []
         
         # Get all users (Note: In production, consider pagination or limiting results)
         users_ref = db.collection('users').stream()
@@ -966,12 +1177,16 @@ def search_users_by_pattern(search_query, current_user):
             username = user_data.get('username', '')
             gmail = user_data.get('gmail', '')
             
-            # Skip current user and blocked users
+            # Skip current user
             if username == current_user.username:
                 continue
+            
+            # Skip nếu người đó đã chặn mình (không cho search ra mình)
             if current_user.username in user_data.get('blocked_users', []):
                 continue
-            if username in current_user.blocked_users:
+            
+            # Skip nếu mình đã chặn người đó
+            if username in current_blocked:
                 continue
             
             # Check if search query matches username or gmail
@@ -988,6 +1203,8 @@ def search_users_by_pattern(search_query, current_user):
         return results
     except Exception as e:
         print(f"Error searching users: {e}")
+        import traceback
+        traceback.print_exc()
         return []
 
 def search_messages_in_chats(search_query, current_user):
@@ -1226,13 +1443,17 @@ def load_user(username):
     if db_ref.exists:
         data = db_ref.to_dict()
         user.password = data.get('password')
-        user.gmail = data.get('gmail')
+        # Lấy gmail trực tiếp từ database, không mã hóa
+        user.gmail = data.get('gmail', '')
+        print(f"Loaded gmail from database for {username}: {user.gmail}")
         user.friends = data.get('friends', [])
         user.groups = data.get('groups', [])
         user.avatar = data.get('avatar')
         user.bio = data.get('bio')
         user.ip_address = data.get('ip_address')
         user.last_active = data.get('last_active')
+        user.status = data.get('status', 'offline')
+        user.blocked_users = data.get('blocked_users', [])
         user.password = data.get('password')
         user.notifications = data.get('notifications', [])
         user.requests = data.get('requests', [])
