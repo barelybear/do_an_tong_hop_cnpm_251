@@ -1,32 +1,76 @@
 import React, { useState, useRef, useEffect } from 'react';
 import '../styles/FriendOrGroupProfile.css';
+import { apiCall } from '../utils/api';
 
 function FriendOrGroupProfile({ chat, currentUser, onClose }) {
   const profileRef = useRef(null);
   const isGroup = chat?.type === 'group';
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [friendInfo, setFriendInfo] = useState(null);
+  const [groupInfo, setGroupInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data - sẽ thay thế bằng dữ liệu từ Firestore
-  const friendInfo = isGroup ? null : {
-    username: chat?.name || 'Người dùng',
-    gmail: 'friend@example.com',
-    bio: 'Luôn sẵn sàng chat 😊',
-    joinedDate: '2024-01-15',
-    mutualFriends: 12
-  };
+  // Load friend or group info from API
+  useEffect(() => {
+    const loadProfileInfo = async () => {
+      if (!chat) return;
+      
+      setLoading(true);
+      try {
+        if (isGroup) {
+          // Load group info
+          const response = await apiCall('get_group_info', [chat.name]);
+          if (response.status === 'success' && response.output) {
+            const groupData = response.output;
+            // Get member statuses by loading friend list
+            const friendListRes = currentUser?.username 
+              ? await apiCall('load_friend_list', [currentUser.username])
+              : { status: 'success', output: [] };
+            
+            const friendsMap = {};
+            if (friendListRes.status === 'success' && friendListRes.output) {
+              friendListRes.output.forEach(f => {
+                friendsMap[f.username] = f.status || 'offline';
+              });
+            }
 
-  const groupInfo = isGroup ? {
-    name: chat?.name || 'Nhóm',
-    avatar: chat?.avatar || '👥',
-    members: [
-      { id: '1', name: 'Nguyễn Hoàng', avatar: 'NH', status: 'online' },
-      { id: '2', name: 'Phạm Thảo', avatar: 'PT', status: 'offline' },
-      { id: '3', name: 'Lê Minh', avatar: 'LM', status: 'online' },
-      { id: '4', name: currentUser?.username || 'Me', avatar: currentUser?.username?.substring(0, 2).toUpperCase() || 'ME', status: 'online' }
-    ],
-    createdDate: '2024-01-10',
-    description: 'Nhóm làm việc chung về dự án'
-  } : null;
+            const members = groupData.members.map((username, index) => ({
+              id: username,
+              name: username,
+              avatar: username.substring(0, 2).toUpperCase(),
+              status: friendsMap[username] || 'offline'
+            }));
+
+            setGroupInfo({
+              name: groupData.group_name || chat.name,
+              avatar: chat?.avatar || '👥',
+              members: members,
+              createdDate: groupData.created_date || '',
+              description: groupData.description || ''
+            });
+          }
+        } else {
+          // Load friend info
+          const response = await apiCall('view_profile', [chat.name]);
+          if (response.status === 'success') {
+            setFriendInfo({
+              username: response.username || chat.name,
+              gmail: response.gmail || '',
+              bio: response.bio || '',
+              joinedDate: response.last_active ? new Date(response.last_active).toLocaleDateString('vi-VN') : '',
+              mutualFriends: response.friends ? response.friends.length : 0
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error loading profile info:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfileInfo();
+  }, [chat, isGroup, currentUser]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -40,6 +84,19 @@ function FriendOrGroupProfile({ chat, currentUser, onClose }) {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [onClose]);
+
+  if (loading) {
+    return (
+      <div className="friend-group-profile-sidebar" ref={profileRef}>
+        <div className="profile-header">
+          <h2>{isGroup ? 'THÔNG TIN NHÓM' : 'THÔNG TIN'}</h2>
+        </div>
+        <div className="profile-content">
+          <div className="empty-state">Đang tải...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="friend-group-profile-sidebar" ref={profileRef}>
@@ -66,7 +123,7 @@ function FriendOrGroupProfile({ chat, currentUser, onClose }) {
             <p className="profile-status" style={{ color: 'transparent' }}>Ẩn</p>
           )}
           {isGroup && groupInfo && (
-            <p className="profile-status">{groupInfo.members.length} thành viên</p>
+            <p className="profile-status">{groupInfo.members?.length || 0} thành viên</p>
           )}
         </div>
 
@@ -149,17 +206,19 @@ function FriendOrGroupProfile({ chat, currentUser, onClose }) {
 
         {isGroup && groupInfo && (
           <>
-            <div className="profile-section">
-              <h4 className="section-title">MÔ TẢ NHÓM</h4>
-              <p className="group-description">{groupInfo.description}</p>
-            </div>
+            {groupInfo.description && (
+              <div className="profile-section">
+                <h4 className="section-title">MÔ TẢ NHÓM</h4>
+                <p className="group-description">{groupInfo.description}</p>
+              </div>
+            )}
 
             <div className="profile-section">
               <div className="section-header">
-                <h4 className="section-title">THÀNH VIÊN ({groupInfo.members.length})</h4>
+                <h4 className="section-title">THÀNH VIÊN ({groupInfo.members?.length || 0})</h4>
               </div>
               <div className="members-list">
-                {groupInfo.members.map((member) => (
+                {groupInfo.members?.map((member) => (
                   <div key={member.id} className="member-item">
                     <div className="member-avatar">
                       <div className="avatar small">{member.avatar}</div>

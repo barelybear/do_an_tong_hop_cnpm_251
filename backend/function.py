@@ -1048,22 +1048,61 @@ def search_messages_in_chats(search_query, current_user):
         return []
 
 def log_out(user):
-    db_ref = firestore.client().collection('users').document(user.username)
-    if db_ref.get().exists:
-        last_active = firestore.firestore.SERVER_TIMESTAMP
-        db_ref.update({
-            'last_active': last_active,
-            'status': "offline"
-        })
-        user.status = "offline"
-        print("User logged out")
-        return True
-    else:
-        print("User not found")
+    """
+    Log out a user by updating their status to offline and setting last_active timestamp.
+    
+    Args:
+        user: User object with username attribute or username string
+        
+    Returns:
+        bool: True if logout successful, False otherwise
+    """
+    try:
+        # Handle both User object and username string
+        if hasattr(user, 'username'):
+            username = user.username
+        else:
+            username = str(user)
+        
+        if not username:
+            print("❌ Cannot logout: username is empty")
+            return False
+        
+        print(f"🔄 Logging out user: {username}")
+        db_ref = firestore.client().collection('users').document(username)
+        user_doc = db_ref.get()
+        
+        if user_doc.exists:
+            # Update status to offline and set last_active timestamp
+            db_ref.update({
+                'last_active': firestore.SERVER_TIMESTAMP,
+                'status': "offline"
+            })
+            
+            # Update user object if it's a User object
+            if hasattr(user, 'status'):
+                user.status = "offline"
+            
+            print(f"✅ User {username} logged out successfully (status updated to offline)")
+            return True
+        else:
+            print(f"❌ User {username} not found in database")
+            return False
+    except Exception as e:
+        print(f"❌ Error logging out user: {e}")
+        import traceback
+        traceback.print_exc()
         return False
     
 def translate_text(message, target_language):
-    return True # Placeholder for translation functionality
+    try:
+        from deep_translator import GoogleTranslator
+        translator = GoogleTranslator(source='auto', target=target_language)
+        translated_text = translator.translate(text=message)
+        return translated_text
+    except Exception as e:
+        print(f"Translation error: {e}")
+        return message  # Return original text if translation fails
 
 def get_final_message_timestamp(chat):
     db_ref = firestore.client().collection('chat').document(chat)
@@ -1251,47 +1290,73 @@ def send_group_invite(from_username, to_username, group_name):
         return False
 
 def send_friend_request(from_username, to_username):
+    # Kiểm tra không gửi cho chính mình
+    if from_username == to_username:
+        print("Cannot send friend request to yourself")
+        return False
+    
     # Lấy dữ liệu user
-    from_user_data = db.collection('users').document(from_username).get()
-    print(from_username)
+    from_user_doc_ref = db.collection('users').document(from_username)
+    from_user_data = from_user_doc_ref.get()
     to_user_doc_ref = db.collection('users').document(to_username)
     to_user_data = to_user_doc_ref.get()
+    
+    # Kiểm tra user tồn tại
+    if not from_user_data.exists:
+        print(f"From user {from_username} not found")
+        return False
+    
+    if not to_user_data.exists:
+        print(f"To user {to_username} not found")
+        return False
+    
+    from_user_dict = from_user_data.to_dict()
+    to_user_dict = to_user_data.to_dict()
+    
+    # Kiểm tra blocked users
+    if to_username in from_user_dict.get('blocked_users', []):
+        print(f"You have blocked {to_username}")
+        return False
+    
+    if from_username in to_user_dict.get('blocked_users', []):
+        print(f"You are blocked by {to_username}")
+        return False
+    
+    # Kiểm tra đã là bạn chưa
+    from_friends = from_user_dict.get('friends', [])
+    to_friends = to_user_dict.get('friends', [])
+    
+    if to_username in from_friends or from_username in to_friends:
+        print(f"{from_username} and {to_username} are already friends")
+        return False
     
     # Khởi tạo tham chiếu đến subcollection 'requests' của người nhận
     to_user_requests_subcollection = to_user_doc_ref.collection('requests')
 
-    # Kiểm tra điều kiện cơ bản
-    if (from_user_data.exists and 
-        to_user_data.exists and
-        to_username not in from_user_data.to_dict().get('blocked_users', []) and
-        from_username not in to_user_data.to_dict().get('blocked_users', [])):
+    # Kiểm tra request đã được gửi chưa (Query subcollection)
+    existing_request_query = to_user_requests_subcollection.where('from_username', '==', from_username).where('type', '==', 'friend').limit(1).get()
+    
+    if list(existing_request_query):
+        print("Friend request already sent")
+        return True
 
-        # 1. Kiểm tra request đã được gửi chưa (Query subcollection)
-        existing_request_query = to_user_requests_subcollection.where('from_username', '==', from_username).where('type', '==', 'friend').limit(1).get()
-        
-        if existing_request_query:
-            print("Friend request already sent")
-            return True
-
-        # 2. Gửi request mới (Thêm Document vào Subcollection)
-        new_request = {
-            'to_username': to_username, # Vẫn giữ để làm đầy đủ metadata
-            'from_username': from_username,
-            'type': 'friend',
-            'timestamp': firestore.SERVER_TIMESTAMP,
-        }
-        
-        try:
-            # Lưu request vào subcollection 'requests' của document user 'to_username'
-            to_user_requests_subcollection.add(new_request)
-            print("Friend request sent")
-            return True
-        except Exception as e:
-            print(f"Error sending friend request: {e}")
-            return False
-
-    else:
-        print("User or friend not found or you blocked/are blocked by this user.")
+    # Gửi request mới (Thêm Document vào Subcollection)
+    new_request = {
+        'to_username': to_username, # Vẫn giữ để làm đầy đủ metadata
+        'from_username': from_username,
+        'type': 'friend',
+        'timestamp': firestore.SERVER_TIMESTAMP,
+    }
+    
+    try:
+        # Lưu request vào subcollection 'requests' của document user 'to_username'
+        to_user_requests_subcollection.add(new_request)
+        print(f"Friend request sent from {from_username} to {to_username}")
+        return True
+    except Exception as e:
+        print(f"Error sending friend request: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def load_request(user):
@@ -1322,11 +1387,155 @@ def load_request(user):
     # requests_list chứa: [{..., 'request_id': 'unique_firestore_id', ...}]
     return requests_list
 
+def accept_friend_request(to_username, request_id, from_username):
+    """
+    Accept friend request: thêm bạn vào cả 2 phía và xóa request khỏi subcollection.
+    
+    Args:
+        to_username: Người nhận request (người đang accept)
+        request_id: ID của request document trong subcollection
+        from_username: Người gửi request (người muốn kết bạn)
+    """
+    try:
+        # Kiểm tra user tồn tại
+        to_user_ref = db.collection('users').document(to_username)
+        from_user_ref = db.collection('users').document(from_username)
+        
+        to_user_data = to_user_ref.get()
+        from_user_data = from_user_ref.get()
+        
+        if not to_user_data.exists:
+            print(f"To user {to_username} not found")
+            return False
+        
+        if not from_user_data.exists:
+            print(f"From user {from_username} not found")
+            return False
+        
+        # Kiểm tra request tồn tại
+        request_ref = to_user_ref.collection('requests').document(request_id)
+        request_data = request_ref.get()
+        
+        if not request_data.exists:
+            print(f"Request {request_id} not found")
+            return False
+        
+        # Kiểm tra request có đúng type và from_username không
+        req_dict = request_data.to_dict()
+        if req_dict.get('type') != 'friend' or req_dict.get('from_username') != from_username:
+            print("Request type or from_username mismatch")
+            return False
+        
+        # Kiểm tra đã là bạn chưa
+        to_user_dict = to_user_data.to_dict()
+        from_user_dict = from_user_data.to_dict()
+        
+        to_friends = to_user_dict.get('friends', [])
+        from_friends = from_user_dict.get('friends', [])
+        
+        if from_username in to_friends or to_username in from_friends:
+            print(f"{from_username} and {to_username} are already friends")
+            # Vẫn xóa request dù đã là bạn
+            request_ref.delete()
+            return True
+        
+        # Thêm bạn vào cả 2 phía
+        if from_username not in to_friends:
+            to_friends.append(from_username)
+        
+        if to_username not in from_friends:
+            from_friends.append(to_username)
+        
+        # Update friends list cho cả 2 user
+        to_user_ref.update({'friends': to_friends})
+        from_user_ref.update({'friends': from_friends})
+        
+        # Tạo chat reference nếu chưa có
+        _get_or_create_chat_ref(to_username, from_username)
+        
+        # Xóa request khỏi subcollection
+        request_ref.delete()
+        
+        print(f"Friend request accepted: {from_username} and {to_username} are now friends")
+        return True
+        
+    except Exception as e:
+        print(f"Error accepting friend request: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+def reject_friend_request(to_username, request_id, from_username):
+    """
+    Reject friend request: xóa request khỏi subcollection.
+    
+    Args:
+        to_username: Người nhận request (người đang reject)
+        request_id: ID của request document trong subcollection
+        from_username: Người gửi request (người bị từ chối)
+    """
+    try:
+        # Kiểm tra user tồn tại
+        to_user_ref = db.collection('users').document(to_username)
+        to_user_data = to_user_ref.get()
+        
+        if not to_user_data.exists:
+            print(f"To user {to_username} not found")
+            return False
+        
+        # Kiểm tra request tồn tại
+        request_ref = to_user_ref.collection('requests').document(request_id)
+        request_data = request_ref.get()
+        
+        if not request_data.exists:
+            print(f"Request {request_id} not found")
+            return False
+        
+        # Kiểm tra request có đúng type và from_username không (optional validation)
+        req_dict = request_data.to_dict()
+        if req_dict.get('type') != 'friend':
+            print("Request is not a friend request")
+            return False
+        
+        # Xóa request khỏi subcollection
+        request_ref.delete()
+        
+        print(f"Friend request rejected: {to_username} rejected request from {from_username}")
+        return True
+        
+    except Exception as e:
+        print(f"Error rejecting friend request: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
 def load_blocked_user(user):
     return firestore.client().collection('users').document(user.username).get().to_dict().get('blocked_users', [])
 
 def load_group_from_name(group_name):
-    group = firestore.client().collection('groups').document(group_name).get().to_dict()
+    group_doc = firestore.client().collection('groups').document(group_name).get()
+    if group_doc.exists:
+        group_data = group_doc.to_dict()
+        return Group(
+            group_data.get('group_name', group_name),
+            group_data.get('members', []),
+            group_data.get('admins', [])
+        )
+    return None
+
+def get_group_info(group_name):
+    """Get group information including members and admins"""
+    group_doc = firestore.client().collection('groups').document(group_name).get()
+    if group_doc.exists:
+        group_data = group_doc.to_dict()
+        return {
+            'group_name': group_data.get('group_name', group_name),
+            'members': group_data.get('members', []),
+            'admins': group_data.get('admins', []),
+            'created_date': group_data.get('created_date'),  # If exists in Firestore
+            'description': group_data.get('description', '')  # If exists in Firestore
+        }
+    return None
 
 
 def translate_message(messages, target_lang = 'vi'):

@@ -18,6 +18,11 @@ def process_request():
     data = request.json
     function_name = data.get("function_name")
     args = data.get("args", [])
+    # Convert args to list if it's a dict (for consistency)
+    if isinstance(args, dict):
+        args = [args]
+    elif not isinstance(args, list):
+        args = [args]
     output = call_function(function_name, *args)
     return output
 
@@ -47,49 +52,110 @@ def call_function(function_name, *args):
     ]
 
     func = None
-    for manager in managers:
-        if hasattr(manager, function_name):
-            func = getattr(manager, function_name)
-            break
+    # First check if function exists in SystemController itself (e.g., log_out)
+    if hasattr(system, function_name):
+        func = getattr(system, function_name)
+        print(f"✅ Found {function_name} in SystemController")
+    else:
+        # Otherwise search in managers
+        for manager in managers:
+            if hasattr(manager, function_name):
+                func = getattr(manager, function_name)
+                print(f"✅ Found {function_name} in {type(manager).__name__}")
+                break
 
     if not callable(func):
-        print(f"❌ Function {function_name} not found.")
+        print(f"❌ Function {function_name} not found in SystemController or any manager.")
         running = False
         return {"error": "Function not found"}
 
     # --- call the function ---
     print(f"🟢 Calling {func} with args:", args)
+    
+    # Check current_user early for functions that need it
+    needs_current_user = function_name in [
+        "load_message_user", "send_message_user", "add_friend", 
+        "search_users", "search_messages_in_chats", "send_friend_request",
+        "accept_friend_request", "reject_friend_request", "load_requests",
+        "create_group", "get_group_info"
+    ]
+    
+    if needs_current_user:
+        if not system.current_user:
+            print(f"❌ ERROR: {function_name} requires login but current_user is None")
+            running = False
+            return {"status": "error", "message": "User not logged in. Please login first.", "output": False, "running": False}
+        if not hasattr(system.current_user, 'username') or not system.current_user.username:
+            print(f"❌ ERROR: {function_name} requires login but current_user has no valid username")
+            running = False
+            return {"status": "error", "message": "User not logged in. Please login first.", "output": False, "running": False}
+        print(f"Current user: {system.current_user.username}")
+    
     try:
-        # Check if current_user exists before accessing username
-        if system.current_user and hasattr(system.current_user, 'username'):
-            print(f"Current user: {system.current_user.username}")
-        else:
-            print("No current user logged in")
-        
         if function_name in ["load_message_user", "send_message_user", "add_friend"]:
-            if not system.current_user or not hasattr(system.current_user, 'username'):
-                running = False
-                return {"status": "error", "message": "User not logged in", "output": False, "running": False}
+            # current_user already checked above
             print(f"Using current user: {system.current_user.username}")
             res = func(system.current_user.username, *args)
         elif function_name in ["search_users", "search_messages_in_chats"]:
-            if not system.current_user or not hasattr(system.current_user, 'username'):
-                running = False
-                return {"status": "error", "message": "User not logged in", "output": [], "running": False}
+            # current_user already checked above
             print(f"Searching with current user: {system.current_user.username}")
             res = func(system.current_user.username, *args)
         elif function_name == 'log_out':
             # For logout, pass current_user object if exists
+            print(f"Logout requested. Current user: {system.current_user}")
             if system.current_user and hasattr(system.current_user, 'username'):
+                username = system.current_user.username
+                print(f"Logging out user: {username}")
                 res = func(system.current_user)
                 # Clear current_user after successful logout
                 if res and res.get("status") == "success":
                     system.current_user = None
-                    print("Current user cleared after logout")
+                    print(f"✅ User {username} logged out successfully. Current user cleared.")
+                else:
+                    print(f"❌ Failed to logout user {username}")
             else:
+                print("⚠️ Logout requested but no user is logged in")
                 res = {"status": "error", "message": "No user logged in", "output": False, "running": False}
-        elif function_name == 'load_requests':# chữa cháy tạm thời
+        elif function_name == 'load_requests':
+            # current_user already checked above
             res = func(system.current_user.username)
+        elif function_name == 'send_friend_request':
+            # send_friend_request needs current_user object and to_username from args
+            # current_user already checked above
+            # args should be [from_username, to_username] from frontend
+            # But controller expects (from_user, to_username), so pass current_user object and to_username
+            if len(args) >= 2:
+                to_username = args[1]  # Second argument is to_username
+                print(f"Calling send_friend_request with current_user={system.current_user.username}, to_username={to_username}")
+                res = func(system.current_user, to_username)
+            else:
+                print(f"ERROR: Missing arguments for send_friend_request. Args received: {args}")
+                running = False
+                return {"status": "error", "message": "Missing arguments for send_friend_request", "output": False, "running": False}
+        elif function_name in ['accept_friend_request', 'reject_friend_request']:
+            # Frontend passes: {request_id, from} as args[0]
+            # We need: to_username (current user), request_id, from_username
+            if not system.current_user or not hasattr(system.current_user, 'username'):
+                running = False
+                return {"status": "error", "message": "User not logged in", "output": False, "running": False}
+            
+            # Extract arguments - args should be list with dict at index 0
+            if len(args) == 0 or not isinstance(args[0], dict):
+                running = False
+                return {"status": "error", "message": f"Invalid arguments format for {function_name}. Expected object with request_id and from.", "output": False, "running": False}
+            
+            arg_obj = args[0]
+            
+            # Extract values from object
+            request_id = arg_obj.get('request_id') or arg_obj.get('id')
+            from_username = arg_obj.get('from') or arg_obj.get('username')  # For friend request, 'from' is the username
+            to_username = system.current_user.username  # Current user is the one accepting/rejecting
+            
+            if request_id and from_username:
+                res = func(to_username, request_id, from_username)
+            else:
+                running = False
+                return {"status": "error", "message": f"Missing required arguments for {function_name}. Need request_id and from.", "output": False, "running": False}
         else:
             res = func(*args)
         

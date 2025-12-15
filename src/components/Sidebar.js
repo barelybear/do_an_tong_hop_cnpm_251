@@ -81,7 +81,10 @@ function Sidebar({ selectedChat, onSelectChat, activeTab, onTabChange, onShowPro
       </div>
 
       {showCreateGroup && (
-        <CreateGroupModal onClose={() => setShowCreateGroup(false)} />
+        <CreateGroupModal 
+          onClose={() => setShowCreateGroup(false)} 
+          currentUser={currentUser}
+        />
       )}
     </div>
   );

@@ -39,7 +39,13 @@ function RequestList({ searchQuery = '', currentUser }) {
     const loadRequests = async () => {
     setLoading(true); // Đảm bảo bắt đầu Loading
     try {
-      let data = await apiCall("load_requests", { currentUser });
+      if (!currentUser || !currentUser.username) {
+        setRequests([]);
+        setFilteredRequests([]);
+        setLoading(false);
+        return;
+      }
+      let data = await apiCall("load_requests", [currentUser.username]);
       let responseObject;
 
       // Bước 1: Parse dữ liệu (Chỉ parse nếu nó là chuỗi)
@@ -143,54 +149,59 @@ function RequestList({ searchQuery = '', currentUser }) {
   // Accept
   const handleAccept = async (request) => {
     try {
+      let response;
       if (request.type === "friend") {
-        await apiCall("add_friend", {
+        response = await apiCall("accept_friend_request", {
           request_id: request.id, 
-          from: request.username, // Metadata phụ trợ cho backend
-          to: currentUser // Cần biết người đang accept là ai để xử lý subcollection
+          from: request.username, // Người gửi request
         });
       } else {
-        await apiCall("accept_group_invite", {
+        response = await apiCall("accept_group_invite", {
           request_id: request.id,
           from: request.inviterName, 
           group_name: request.groupName,
-          to: currentUser // Cần biết người đang accept là ai
         });
       }
       
-      removeRequestFromState(request.id);
+      if (response && response.status === "success") {
+        removeRequestFromState(request.id);
+        // Reload friend list if needed (optional)
+      } else {
+        alert("Không thể chấp nhận lời mời. Vui lòng thử lại.");
+      }
       
     } catch (e) {
       console.error("Failed to accept request:", e);
-      // Hiển thị thông báo lỗi cho người dùng (nếu có UI/toast system)
+      alert("Đã xảy ra lỗi khi chấp nhận lời mời.");
     }
   };
 
   // Reject
   const handleReject = async (request) => {
     try {
-      // Cả hai hành động Reject/Delete đều cần 'request_id' và 'to' (currentUser) để tìm
-      // document subcollection và xóa nó.
-      
+      let response;
       if (request.type === "friend") {
-        await apiCall("reject_friend_request", {
+        response = await apiCall("reject_friend_request", {
           request_id: request.id,
-          from: request.username,
-          to: currentUser
+          from: request.username, // Người gửi request
         });
       } else {
-        await apiCall("reject_group_invite", {
+        response = await apiCall("reject_group_invite", {
           request_id: request.id,
           from: request.inviterName,
           group_name: request.groupName,
-          to: currentUser
         });
       }
       
-      removeRequestFromState(request.id);
+      if (response && response.status === "success") {
+        removeRequestFromState(request.id);
+      } else {
+        alert("Không thể từ chối lời mời. Vui lòng thử lại.");
+      }
       
     } catch (e) {
       console.error("Failed to reject request:", e);
+      alert("Đã xảy ra lỗi khi từ chối lời mời.");
     }
   };
 

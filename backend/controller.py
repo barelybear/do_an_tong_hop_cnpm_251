@@ -28,13 +28,24 @@ class SystemController:
         return self
 
     def log_out(self, user):
+        """
+        Log out a user.
+        
+        Args:
+            user: User object from system.current_user with username attribute
+            
+        Returns:
+            dict: Response with status, message, and output
+        """
         # user is already a User object from system.current_user
         if user and hasattr(user, 'username'):
+            username = user.username
+            print(f"🔐 Attempting to logout user: {username}")
             result = function.log_out(user)
             if result:
-                return {"status": "success", "message": "User logged out", "output": True, "running": False}
+                return {"status": "success", "message": f"User {username} logged out successfully", "output": True, "running": False}
             else:
-                return {"status": "error", "message": "Failed to logout", "output": False, "running": False}
+                return {"status": "error", "message": "Failed to logout. Please try again.", "output": False, "running": False}
         return {"status": "error", "message": "No user to logout", "output": False, "running": False}
 
 class AuthManager:
@@ -174,9 +185,10 @@ class ChatManager:
     
     def translate_message(self, message, target_language):
         res = function.translate_text(message, target_language)
-        if res:
-             return {"status": "success", "message": "Message translated.", "output": True, "running": False}
-        return {"status": "error", "message": "Failed to translate message.", "output": False, "running": False}
+        if res and res != message:  # Translation succeeded (result different from original)
+             return {"status": "success", "message": "Message translated.", "output": res, "running": False}
+        # If translation failed, return original message
+        return {"status": "error", "message": "Failed to translate message.", "output": message, "running": False}
 
 class FileManager:
     def __init__(self):
@@ -243,6 +255,13 @@ class GroupManager:
                 return {"status": "success", "message": "Member promoted.", "output": True, "running": False, "group_name": res.group_name, "members": res.members, "admins": res.admins}
         return {"status": "error", "message": "Failed to promote member.", "output": False, "running": False}
 
+    def get_group_info(self, group_name_str):
+        """Get group information"""
+        group_info = function.get_group_info(group_name_str)
+        if group_info:
+            return {"status": "success", "message": "Group info loaded.", "output": group_info, "running": False}
+        return {"status": "error", "message": "Group not found.", "output": None, "running": False}
+    
     def demote_admin_to_member(self, user, group_name_str, admin_username):
         user = function.load_user(user)
         group = function.load_group_from_name(group_name_str)
@@ -256,7 +275,13 @@ class NotificationManager:
     def __init__(self):
         pass
     def send_friend_request(self, from_user, to_username):
-        if from_user and function.send_friend_request(from_user, to_username):
+        # from_user can be either User object or username string
+        if hasattr(from_user, 'username'):
+            from_username = from_user.username
+        else:
+            from_username = str(from_user)
+        
+        if from_username and to_username and function.send_friend_request(from_username, to_username):
              return {"status": "success", "message": "Friend request sent.", "output": True, "running": False}
         return {"status": "error", "message": "Failed to send friend request.", "output": False, "running": False}
     
@@ -273,6 +298,18 @@ class NotificationManager:
             print("456")
             return {"status": "success", "output": requests, "running": False}
         return {"status": "error", "output": [], "running": False}
+    
+    def accept_friend_request(self, to_username, request_id, from_username):
+        if to_username and request_id and from_username:
+            if function.accept_friend_request(to_username, request_id, from_username):
+                return {"status": "success", "message": "Friend request accepted.", "output": True, "running": False}
+        return {"status": "error", "message": "Failed to accept friend request.", "output": False, "running": False}
+    
+    def reject_friend_request(self, to_username, request_id, from_username):
+        if to_username and request_id and from_username:
+            if function.reject_friend_request(to_username, request_id, from_username):
+                return {"status": "success", "message": "Friend request rejected.", "output": True, "running": False}
+        return {"status": "error", "message": "Failed to reject friend request.", "output": False, "running": False}
 
 
 class UIManager:

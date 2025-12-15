@@ -152,53 +152,26 @@ function ChatWindow({ selectedChat, onShowFriendOrGroupProfile, userLanguage = '
 
     try {
       // Gọi API backend để dịch
-      const response = await fetch('http://127.0.0.1:5000/api/process', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          function_name: 'translate_text',
-          args: [msg.content, userLanguage]
-        })
-      });
-      
-      const data = await response.json();
+      const data = await apiCall('translate_message', [msg.content, userLanguage]);
       
       if (data.status === 'success' && data.output) {
         setTranslatedMessages({
           ...translatedMessages,
           [msg.id]: data.output
         });
-      } else {
-        // Mock translation nếu API chưa sẵn sàng
-        const mockTranslations = {
-          'vi': {
-            'en': { 'Chào bạn! Bạn có khỏe không?': 'Hello! How are you?', 'Dự án của bạn tiến triển thế nào rồi?': 'How is your project going?' },
-            'ja': { 'Chào bạn! Bạn có khỏe không?': 'こんにちは！お元気ですか？', 'Dự án của bạn tiến triển thế nào rồi?': 'プロジェクトはどう進んでいますか？' },
-            'ko': { 'Chào bạn! Bạn có khỏe không?': '안녕하세요! 잘 지내세요?', 'Dự án của bạn tiến triển thế nào rồi?': '프로젝트는 어떻게 진행되고 있나요?' },
-            'zh': { 'Chào bạn! Bạn có khỏe không?': '你好！你好吗？', 'Dự án của bạn tiến triển thế nào rồi?': '你的项目进展如何？' }
-          }
-        };
-        
-        const translated = mockTranslations['vi']?.[userLanguage]?.[msg.content] || msg.content;
+      } else if (data.output) {
+        // If API returns original message (error case), use it
         setTranslatedMessages({
           ...translatedMessages,
-          [msg.id]: translated
+          [msg.id]: data.output
         });
+      } else {
+        // If translation fails completely, keep original message
+        console.error('Translation failed, keeping original message');
       }
     } catch (error) {
       console.error('Translation error:', error);
-      // Mock fallback
-      const mockTranslations = {
-        'vi': {
-          'en': { 'Chào bạn! Bạn có khỏe không?': 'Hello! How are you?', 'Dự án của bạn tiến triển thế nào rồi?': 'How is your project going?' },
-          'ja': { 'Chào bạn! Bạn có khỏe không?': 'こんにちは！お元気ですか？', 'Dự án của bạn tiến triển thế nào rồi?': 'プロジェクトはどう進んでいますか？' },
-        }
-      };
-      const translated = mockTranslations['vi']?.[userLanguage]?.[msg.content] || msg.content;
-      setTranslatedMessages({
-        ...translatedMessages,
-        [msg.id]: translated
-      });
+      // On error, keep original message (don't use mock data)
     }
     
     setContextMenu(null);
