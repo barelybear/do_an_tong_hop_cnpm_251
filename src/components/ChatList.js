@@ -93,13 +93,10 @@ function ChatList({ selectedChat, onSelectChat, searchQuery, currentUser, refres
 
   return (
     <div className="chat-list">
-      {loading && (
-        <div className="empty-state">Đang tải...</div>
-      )}
       {error && (
         <div className="empty-state error">{error}</div>
       )}
-      {!loading && !error && filteredChats.map((chat) => (
+      {!error && filteredChats.map((chat) => (
         <div
           key={chat.id}
           className={`chat-item ${selectedChat?.id === chat.id ? 'selected' : ''}`}
