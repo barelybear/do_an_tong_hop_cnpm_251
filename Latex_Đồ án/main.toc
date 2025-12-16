@@ -1,0 +1,40 @@
+\contentsline {section}{Danh sách thành viên và phân công nhiệm vụ}{1}{section*.1}%
+\contentsline {section}{\numberline {1}Motivation \& Problem Statement}{3}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Domain Description}{3}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Stackholders và Needs}{3}{subsection.1.2}%
+\contentsline {subsection}{\numberline {1.3}Stakeholders and Needs}{3}{subsection.1.3}%
+\contentsline {subsection}{\numberline {1.4}System Benefits}{4}{subsection.1.4}%
+\contentsline {section}{\numberline {2}Project Scope}{4}{section.2}%
+\contentsline {subsection}{\numberline {2.1}In - Scope}{4}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Out - of - scope}{5}{subsection.2.2}%
+\contentsline {section}{\numberline {3}Requirements}{5}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Functional Requirements}{5}{subsection.3.1}%
+\contentsline {subsubsection}{\numberline {3.1.1}Xác thực}{5}{subsubsection.3.1.1}%
+\contentsline {subsubsection}{\numberline {3.1.2}Quản lý bạn bè và nhóm}{5}{subsubsection.3.1.2}%
+\contentsline {subsubsection}{\numberline {3.1.3}Trò chuyện cá nhân và nhóm}{5}{subsubsection.3.1.3}%
+\contentsline {subsubsection}{\numberline {3.1.4}Hỗ trợ dịch song ngữ (Tính năng mới)}{6}{subsubsection.3.1.4}%
+\contentsline {subsubsection}{\numberline {3.1.5}Quản lý thông báo và trạng thái}{6}{subsubsection.3.1.5}%
+\contentsline {subsubsection}{\numberline {3.1.6}Đa phương tiện}{6}{subsubsection.3.1.6}%
+\contentsline {subsubsection}{\numberline {3.1.7}Dashboard quản lý cá nhân}{6}{subsubsection.3.1.7}%
+\contentsline {subsubsection}{\numberline {3.1.8}Danh sách bạn bè, nhóm}{6}{subsubsection.3.1.8}%
+\contentsline {subsection}{\numberline {3.2}Non-functional Requirements}{6}{subsection.3.2}%
+\contentsline {subsubsection}{\numberline {3.2.1}Hiệu năng}{6}{subsubsection.3.2.1}%
+\contentsline {subsubsection}{\numberline {3.2.2}Tính khả dụng}{7}{subsubsection.3.2.2}%
+\contentsline {subsubsection}{\numberline {3.2.3}Độ tin cậy}{7}{subsubsection.3.2.3}%
+\contentsline {subsubsection}{\numberline {3.2.4}Bảo mật}{7}{subsubsection.3.2.4}%
+\contentsline {subsubsection}{\numberline {3.2.5}Khả năng mở rộng}{7}{subsubsection.3.2.5}%
+\contentsline {section}{\numberline {4}Use Case Model}{8}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Use Case Diagram}{8}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Use Case Descriptions}{9}{subsection.4.2}%
+\contentsline {section}{\numberline {5}System Modeling}{22}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Activity Diagrams}{22}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Sequence Diagrams}{36}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Class Diagrams}{46}{subsection.5.3}%
+\contentsline {section}{\numberline {6}Architectural Design}{47}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Database Design}{47}{subsection.6.1}%
+\contentsline {subsubsection}{\numberline {6.1.1}ER Diagram}{47}{subsubsection.6.1.1}%
+\contentsline {subsubsection}{\numberline {6.1.2}Database Schema}{48}{subsubsection.6.1.2}%
+\contentsline {subsection}{\numberline {6.2}Software Architecture}{49}{subsection.6.2}%
+\contentsline {subsubsection}{\numberline {6.2.1}High-level Architecture}{49}{subsubsection.6.2.1}%
+\contentsline {subsubsection}{\numberline {6.2.2}Component Diagram}{49}{subsubsection.6.2.2}%
+\contentsline {subsubsection}{\numberline {6.2.3}Deployment Diagram}{50}{subsubsection.6.2.3}%

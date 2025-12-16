@@ -1,0 +1,72 @@
+{
+    // LaTeX Workshop settings - Auto compile và preview song song
+    "latex-workshop.latex.recipes": [
+        {
+            "name": "pdflatex ➞ pdflatex",
+            "tools": [
+                "pdflatex",
+                "pdflatex"
+            ]
+        }
+    ],
+    "latex-workshop.latex.tools": [
+        {
+            "name": "pdflatex",
+            "command": "pdflatex",
+            "args": [
+                "-synctex=1",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+                "%DOC%"
+            ],
+            "env": {}
+        }
+    ],
+    
+    // Tự động build khi save file
+    "latex-workshop.latex.autoBuild.run": "onSave",
+    
+    // Tự động clean sau khi build - TẮT để tránh lỗi code page
+    // Bạn có thể clean thủ công bằng command "LaTeX Workshop: Clean up auxiliary files"
+    "latex-workshop.latex.autoClean.run": "never",
+    
+    // Hiển thị PDF viewer bên cạnh khi mở file .tex
+    "latex-workshop.view.pdf.viewer": "tab",
+    "latex-workshop.view.pdf.internal.synctex.keybinding": "double-click",
+    
+    // Forward/Backward sync (click vào PDF sẽ jump đến code và ngược lại)
+    "latex-workshop.synctex.afterBuild.enabled": true,
+    "latex-workshop.synctex.synctexjs.enabled": true,
+    
+    // Tự động mở PDF sau khi build
+    "latex-workshop.view.pdf.internal.viewer.synctex": "auto",
+    
+    // Clean các file aux khi clean (chỉ khi clean thủ công)
+    "latex-workshop.latex.clean.fileTypes": [
+        "*.aux",
+        "*.bbl",
+        "*.blg",
+        "*.idx",
+        "*.ind",
+        "*.lof",
+        "*.lot",
+        "*.out",
+        "*.toc",
+        "*.acn",
+        "*.acr",
+        "*.alg",
+        "*.glg",
+        "*.glo",
+        "*.gls",
+        "*.ist",
+        "*.fls",
+        "*.fdb_latexmk",
+        "*.snm",
+        "*.nav",
+        "*.synctex.gz"
+    ],
+    
+    // Tắt warning về code page để tránh lỗi console
+    "latex-workshop.latex.clean.subfolder.enabled": false
+}
+
