@@ -71,7 +71,6 @@ function CreateGroupModal({ onClose, currentUser }) {
         alert(`Đã tạo nhóm "${groupName}" thành công!`);
         onClose();
         // Refresh the page or reload chat list if needed
-        window.location.reload();
       } else {
         alert(`Không thể tạo nhóm: ${response.message || 'Có lỗi xảy ra'}`);
       }
