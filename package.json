@@ -8,7 +8,11 @@
     "dev": "webpack --mode development --watch",
     "build": "webpack --mode production"
   },
-  "keywords": ["electron", "react", "chat"],
+  "keywords": [
+    "electron",
+    "react",
+    "chat"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
@@ -24,8 +28,7 @@
   },
   "dependencies": {
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "socket.io-client": "^4.8.1"
   }
 }
-
-

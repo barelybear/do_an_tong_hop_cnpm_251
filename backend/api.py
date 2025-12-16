@@ -4,8 +4,13 @@ import helper
 from flask_cors import CORS
 import function
 import traceback
+from flask_socketio import SocketIO, join_room, leave_room
+
 app = Flask(__name__)
 CORS(app)
+# Socket.IO server
+socketio = SocketIO(app, cors_allowed_origins="*")
+
 # This dude is current user
 # These dude cant run while something is running
 cache_chat_list = []
@@ -13,6 +18,8 @@ cache_chat_wind = []
 forbidden_during_running = ["login", "sign_up", "log_out"]
 running = False
 system = controller.SystemController(None).get_instance()
+
+
 @app.route('/api/process', methods=['POST'])
 def process_request():
     data = request.json
@@ -25,6 +32,13 @@ def process_request():
         args = [args]
     output = call_function(function_name, *args)
     return output
+
+
+def _get_direct_chat_room(user1_username, user2_username):
+    """Generate consistent room id for direct chat (same logic as _get_or_create_chat_ref)."""
+    sorted_users = sorted([user1_username, user2_username])
+    return f"{sorted_users[0]}_{sorted_users[1]}"
+
 
 def call_function(function_name, *args):
     global running
@@ -330,8 +344,32 @@ def call_function(function_name, *args):
                     print(f"Current user groups updated: {system.current_user.groups}")
                 else:
                     print(f"⚠️ Warning: Failed to reload user {username}, keeping current_user as is")
-        # Note: sign_up doesn't set current_user - user needs to login separately
-        
+
+        # --- Socket.IO real-time events ---
+        try:
+            if function_name == 'send_message_user' and res and res.get('status') == 'success':
+                if len(args) >= 2 and system.current_user and hasattr(system.current_user, 'username'):
+                    to_user = args[0]
+                    content = args[1]
+                    from_username = system.current_user.username
+                    room = _get_direct_chat_room(from_username, to_user)
+                    socketio.emit(
+                        'new_message',
+                        {
+                            'room': room,
+                            'chatType': 'direct',
+                            'from': from_username,
+                            'to': to_user,
+                            'content': content
+                        },
+                        room=room
+                    )
+                    # also notify both users to refresh their chat list
+                    socketio.emit('chat_list_updated', {'username': from_username}, room=from_username)
+                    socketio.emit('chat_list_updated', {'username': to_user}, room=to_user)
+        except Exception as e_emit:
+            print(f"Socket.IO emit error for {function_name}: {e_emit}")
+
         running = False
         print(res)
         return res
@@ -342,49 +380,36 @@ def call_function(function_name, *args):
         running = False  # Always reset running flag on error
         return {"status": "error", "message": str(e), "output": False, "running": False}
 
-# def on_login(username, password):
-#     global running
-#     if running:
-#         return {"running": True, "output": False}
-#     global current_user
-#     current_user = controller.login(username, password, current_user)
-#     if current_user is not None:
-#         return jsonify({"status": "success", "message": "User logged in", "output": True})
-#     return jsonify({"status": "error", "message": "Login failed", "output": False, "running": False})
-# template for modifying function in controller.py
-# def on_signup(username, password, gmail):
-#     global current_user
-#     global running
-#     if running:
-#         return {"running": True, "output": False}
-#     if function.sign_up(username, password, gmail):
-#         return jsonify({"status": "success", "message": "User signed up", "output": True})
-#     return jsonify({"status": "error", "message": "Sign up failed", "output": False, "running": False})
 
-# def on_logout():
-#     global current_user
-#     global running
-#     if running:
-#         return {"running": True, "output": False}
-#     if function.log_out(current_user):
-#         current_user = None
-#         return jsonify({"status": "success", "message": "User logged out", "output": True})
-#     return jsonify({"status": "error", "message": "Logout failed", "output": False, "running": False})
+@socketio.on('connect')
+def handle_connect():
+    print('🔌 Client connected')
 
-# def get_current_user():
-#     global current_user
-#     if current_user and current_user.username:
-#         return jsonify({"status": "success", "username": current_user.username, "gmail": current_user.gmail})
-#     return jsonify({"status": "error", "message": "No user logged in"})
 
-# def load_chat_users():
-#     global current_user
-#     if current_user:
-#         users = function.load_chat_users(current_user)
-#         return jsonify({"status": "success", "users": users})
-#     return jsonify({"status": "error", "message": "No user logged in"})
+@socketio.on('disconnect')
+def handle_disconnect():
+    print('🔌 Client disconnected')
+
+
+@socketio.on('join')
+def handle_join(data):
+    """Client joins a room. Expected data: { room: string }"""
+    room = data.get('room') if isinstance(data, dict) else None
+    if room:
+        print(f"Client joining room: {room}")
+        join_room(room)
+
+
+@socketio.on('leave')
+def handle_leave(data):
+    """Client leaves a room. Expected data: { room: string }"""
+    room = data.get('room') if isinstance(data, dict) else None
+    if room:
+        print(f"Client leaving room: {room}")
+        leave_room(room)
+
 
 if __name__ == '__main__':
     system = controller.SystemController(system).get_instance()
-
-    app.run(debug=True, host='127.0.0.1', port=5000)
+    # Run with Socket.IO server
+    socketio.run(app, debug=True, host='127.0.0.1', port=5000)

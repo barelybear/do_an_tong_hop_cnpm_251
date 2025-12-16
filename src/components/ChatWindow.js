@@ -1,6 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import '../styles/ChatWindow.css';
 import { apiCall, formatTimestamp } from '../utils/api';
+import { io } from 'socket.io-client';
+
+// Tạo một kết nối Socket.IO dùng chung cho toàn bộ file
+const socket = io('http://127.0.0.1:5000', {
+  autoConnect: false,
+});
+
 function ChatWindow({ selectedChat, onShowFriendOrGroupProfile, userLanguage = 'vi', currentUser }) {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
@@ -10,37 +17,74 @@ function ChatWindow({ selectedChat, onShowFriendOrGroupProfile, userLanguage = '
   const [translatedMessages, setTranslatedMessages] = useState({});
   // Cần thêm marker cho biết đây là group hay là user
   // Tam thoi chua ap dung cho group
-  useEffect(() => {
-    const loadMessages = async () => {
-      if (selectedChat) {
-        try {
-          const response = await apiCall('load_message_user', [selectedChat.name]);
-          console.log('Load messages response:', response); // Debug log
-          
-          if (response && response.status === 'success' && response.output) {
-            const result = response.output;
-            if (Array.isArray(result)) {
-              setMessages(result);
-            } else if (result && typeof result === 'object') {
-              setMessages([result]);
-            } else {
-              setMessages([]);
-            }
-          } else {
-            console.error('Failed to load messages:', response);
-            setMessages([]);
-          }
-        } catch (error) {
-          console.error('Error loading messages:', error);
+  // Hàm load tin nhắn (dùng lại cho initial load + realtime qua socket)
+  const loadMessages = async () => {
+    if (!selectedChat) {
+      setMessages([]);
+      return;
+    }
+
+    try {
+      const response = await apiCall('load_message_user', [selectedChat.name]);
+      console.log('Load messages response:', response); // Debug log
+      
+      if (response && response.status === 'success' && response.output) {
+        const result = response.output;
+        if (Array.isArray(result)) {
+          setMessages(result);
+        } else if (result && typeof result === 'object') {
+          setMessages([result]);
+        } else {
           setMessages([]);
         }
       } else {
+        console.error('Failed to load messages:', response);
         setMessages([]);
       }
-    };
-    
+    } catch (error) {
+      console.error('Error loading messages:', error);
+      setMessages([]);
+    }
+  };
+
+  // Initial load khi đổi selectedChat
+  useEffect(() => {
     loadMessages();
   }, [selectedChat]);
+
+  // Lắng nghe Socket.IO để nhận tin nhắn realtime
+  useEffect(() => {
+    if (!selectedChat || !currentUser || !currentUser.username) return;
+
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    const isGroup = selectedChat.type === 'group';
+    let room;
+    if (isGroup) {
+      room = selectedChat.name;
+    } else {
+      const users = [currentUser.username, selectedChat.name].sort();
+      room = `${users[0]}_${users[1]}`;
+    }
+
+    // Join room tương ứng với cuộc chat đang mở
+    socket.emit('join', { room });
+
+    const handleNewMessage = (data) => {
+      if (!data || data.room !== room) return;
+      // Khi có tin mới trong room này thì reload lại messages
+      loadMessages();
+    };
+
+    socket.on('new_message', handleNewMessage);
+
+    return () => {
+      socket.off('new_message', handleNewMessage);
+      socket.emit('leave', { room });
+    };
+  }, [selectedChat, currentUser]);
 
   useEffect(() => {
     scrollToBottom();
@@ -74,7 +118,8 @@ function ChatWindow({ selectedChat, onShowFriendOrGroupProfile, userLanguage = '
         console.log('Send message response:', res); // Debug log
         
         if (res && res.status === 'success') {
-          // Reload messages from server to get the actual message with correct ID and timestamp
+          // Sau khi backend xử lý xong, Socket.IO sẽ bắn sự kiện new_message
+          // nên ở đây chỉ cần sync lại nếu muốn chắc chắn
           const response = await apiCall('load_message_user', [selectedChat.name]);
           if (response && response.status === 'success' && response.output) {
             setMessages(response.output);
@@ -315,5 +360,3 @@ function ChatWindow({ selectedChat, onShowFriendOrGroupProfile, userLanguage = '
 }
 
 export default ChatWindow;
-
-
