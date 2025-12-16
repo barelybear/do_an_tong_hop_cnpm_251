@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import '../styles/ChatList.css';
 import { apiCall, formatTimestamp } from '../utils/api';
 // D  
@@ -18,72 +18,62 @@ function ChatList({ selectedChat, onSelectChat, searchQuery, currentUser, refres
     return (words[0][0] + words[words.length - 1][0]).toUpperCase();
   };
 
-  // Load chat list from backend
-  useEffect(() => {
-    const loadChatList = async () => {
-      if (!currentUser || !currentUser.username) {
-        setLoading(false);
-        return;
-      }
+  // Load chat list from backend (reusable function)
+  const loadChatList = useCallback(async () => {
+    if (!currentUser || !currentUser.username) {
+      setLoading(false);
+      return;
+    }
 
-      try {
-        setLoading(true);
-        const response = await apiCall('load_chat_list', [currentUser.username]);
-        
-        if (response.status === 'success' && response.output) {
-          // Format timestamps and process chat list
-          const formattedChats = response.output.map(chat => ({
-            ...chat,
-            timestamp: formatTimestamp(chat.timestamp),
-            // Generate avatar initials from name
-            avatar: generateAvatar(chat.name)
-          }));
-          setChats(formattedChats);
-          setError(null);
-        } else {
-          setError('Không thể tải danh sách chat');
-          setChats([]);
-        }
-      } catch (err) {
-        console.error('Error loading chat list:', err);
-        setError('Lỗi kết nối đến server');
+    try {
+      setLoading(true);
+      const response = await apiCall('load_chat_list', [currentUser.username]);
+      
+      if (response.status === 'success' && response.output) {
+        // Format timestamps and process chat list
+        const formattedChats = response.output.map(chat => ({
+          ...chat,
+          timestamp: formatTimestamp(chat.timestamp),
+          // Generate avatar initials from name
+          avatar: generateAvatar(chat.name)
+        }));
+        setChats(formattedChats);
+        setError(null);
+      } else {
+        setError('Không thể tải danh sách chat');
         setChats([]);
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (err) {
+      console.error('Error loading chat list:', err);
+      setError('Lỗi kết nối đến server');
+      setChats([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentUser]);
 
+  // Initial load + reload when refreshKey changes
+  useEffect(() => {
     loadChatList();
-  }, [currentUser, refreshKey]);
-    // Background listener for message updates
+  }, [loadChatList, refreshKey]);
+
+  // Background polling for message updates (pseudo real-time)
   useEffect(() => {
     if (!currentUser || !currentUser.username) return;
 
     let isRunning = true;
 
-    async function checkForNewMessages() {
-      try {
-        const response = await apiCall('listen_for_messages', currentUser.username);
-
-        // If backend says there's a change
-        if (response.status === 'success' && response.output === true) {
-          console.log('🔔 Detected new message — refreshing chat list...');
-          await loadChatList(); // call your existing loader
-        }
-      } catch (err) {
-        console.error('Error checking messages:', err);
-      }
-    }
-
     const interval = setInterval(() => {
-      if (isRunning) checkForNewMessages();
-    }, 5000000);
+      if (!isRunning) return;
+      // Đơn giản: poll lại danh sách chat để cập nhật last message / unread
+      loadChatList();
+    }, 3000); // 3s gần real-time, đủ nhẹ
 
     return () => {
       isRunning = false;
       clearInterval(interval);
     };
-  }, [currentUser]);
+  }, [currentUser, loadChatList]);
 
 
   // Filter chats based on search query - search in name only

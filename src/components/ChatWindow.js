@@ -8,38 +8,57 @@ function ChatWindow({ selectedChat, onShowFriendOrGroupProfile, userLanguage = '
   const [contextMenu, setContextMenu] = useState(null);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [translatedMessages, setTranslatedMessages] = useState({});
+  const [isAutoRefreshing, setIsAutoRefreshing] = useState(false);
   // Cần thêm marker cho biết đây là group hay là user
   // Tam thoi chua ap dung cho group
-  useEffect(() => {
-    const loadMessages = async () => {
-      if (selectedChat) {
-        try {
-          const response = await apiCall('load_message_user', [selectedChat.name]);
-          console.log('Load messages response:', response); // Debug log
-          
-          if (response && response.status === 'success' && response.output) {
-            const result = response.output;
-            if (Array.isArray(result)) {
-              setMessages(result);
-            } else if (result && typeof result === 'object') {
-              setMessages([result]);
-            } else {
-              setMessages([]);
-            }
-          } else {
-            console.error('Failed to load messages:', response);
-            setMessages([]);
-          }
-        } catch (error) {
-          console.error('Error loading messages:', error);
+  // Hàm load tin nhắn (dùng lại cho initial load + polling)
+  const loadMessages = async () => {
+    if (!selectedChat) {
+      setMessages([]);
+      return;
+    }
+
+    try {
+      const response = await apiCall('load_message_user', [selectedChat.name]);
+      console.log('Load messages response:', response); // Debug log
+      
+      if (response && response.status === 'success' && response.output) {
+        const result = response.output;
+        if (Array.isArray(result)) {
+          setMessages(result);
+        } else if (result && typeof result === 'object') {
+          setMessages([result]);
+        } else {
           setMessages([]);
         }
       } else {
+        console.error('Failed to load messages:', response);
         setMessages([]);
       }
-    };
-    
+    } catch (error) {
+      console.error('Error loading messages:', error);
+      setMessages([]);
+    }
+  };
+
+  // Initial load khi đổi selectedChat
+  useEffect(() => {
     loadMessages();
+  }, [selectedChat]);
+
+  // Polling để cập nhật gần real-time khi đang mở 1 cuộc chat
+  useEffect(() => {
+    if (!selectedChat) return;
+
+    setIsAutoRefreshing(true);
+    const interval = setInterval(() => {
+      loadMessages();
+    }, 1500); // 1.5s: đủ mượt nhưng không quá nặng
+
+    return () => {
+      clearInterval(interval);
+      setIsAutoRefreshing(false);
+    };
   }, [selectedChat]);
 
   useEffect(() => {

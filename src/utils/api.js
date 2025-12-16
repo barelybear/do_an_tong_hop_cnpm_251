@@ -11,6 +11,8 @@ const NO_CACHE_FUNCTIONS = [
   'send_message_group',
   'send_file_user',
   'send_file_group',
+  'load_message_user',
+  'load_chat_list',
   'add_friend',
   'remove_friend',
   'block_user',
