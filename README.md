@@ -67,7 +67,7 @@ npm start
 
 ## Cấu trúc thư mục
 
-\`\`\`
+```text
 chatDessktop/
 ├── main.js                 # Electron main process
 ├── webpack.config.js       # Webpack configuration
@@ -100,7 +100,7 @@ chatDessktop/
 │       ├── CreateGroupModal.css
 │       └── UserProfile.css
 └── dist/                   # Build output
-\`\`\`
+```
 
 ## Công nghệ sử dụng
 
