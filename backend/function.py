@@ -27,7 +27,24 @@ if not firebase_admin._apps:
 db = firestore.client()
 
 # ---------------- PCLOUD CONFIG ----------------
-PCLOUD_TOKEN = "xFteTZu6gP7Z6Gtj5GoqnEp3O2berH5iYuS4Yk1k"  # use the 'auth' returned from /login
+from pcloud import PyCloud
+
+# Initialize and log in automatically
+# For US accounts (default):
+pc = PyCloud('nghiem.trinhaman@hcmut.edu.vn', 'jXG8c?BsZ-FSJ&b')
+
+# For EU accounts (eapi.pcloud.com):
+# pc = PyCloud('nghiem.trinhaman@hcmut.edu.vn', 'jXG8c?BsZ-FSJ&b', endpoint="eapi")
+
+# Verify login by listing root folder
+PCLOUD_TOKEN = None
+try:
+    PCLOUD_TOKEN = pc.auth_token
+    print("Login successful!")
+except Exception as e:
+    print(f"Login failed: {e}")
+
+# Example of an operation after login
 PCLOUD_FOLDER_ID = 0  # root folder
 PCLOUD_API_HOST = "api.pcloud.com" 
 
