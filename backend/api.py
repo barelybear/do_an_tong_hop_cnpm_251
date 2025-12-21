@@ -94,7 +94,7 @@ def call_function(function_name, *args):
         "create_group", "get_group_info", "block_user", "unblock_user", "remove_friend",
         "add_member_to_group", "remove_member_from_group", "promote_member_to_admin",
         "demote_admin_to_member", "disband_group", "leave_group",
-        "view_profile", "set_user_status", "update_profile"
+        "view_profile", "set_user_status", "update_profile", "send_file_user", "send_file_group"
     ]
     
     if needs_current_user:
@@ -323,6 +323,10 @@ def call_function(function_name, *args):
                 return {"status": "error", "message": "Missing arguments for update_profile. Need new_bio.", "output": False, "running": False}
             print(f"Updating profile for {username} with bio: {new_bio}")
             res = func(username, new_bio)
+        elif function_name == "send_file_user":
+            res = system.file_manager.send_file_user(args[0], system.current_user.username)
+        elif function_name == "send_file_group":
+            res = system.file_manager.send_file_group(args[0], system.current_user.username)
         else:
             res = func(*args)
         
@@ -344,7 +348,7 @@ def call_function(function_name, *args):
                     print(f"Current user groups updated: {system.current_user.groups}")
                 else:
                     print(f"⚠️ Warning: Failed to reload user {username}, keeping current_user as is")
-
+        
         # --- Socket.IO real-time events ---
         try:
             if function_name == 'send_message_user' and res and res.get('status') == 'success':

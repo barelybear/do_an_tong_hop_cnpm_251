@@ -63,13 +63,19 @@ class AuthManager:
         if res:
             return {"status": "success", "message": "User signed up", "output": True, "running": False}
         return {"status": "error", "message": "Sign up failed", "output": False, "running": False}
-    
-    def forget_password(self, gmail):
-        res = function.forget_password(gmail)
+
+    def forget_password(self, password, gmail):
+        res = function.forget_password(password, gmail)
         if res:
             return {"status": "success", "message": "Password reset email sent", "output": True, "running": False}
         return {"status": "error", "message": "Failed to send password reset email", "output": False, "running": False, "is_user": False}
     # chua xong
+
+    def verify_email(self, receiver_email: str, is_sign_up = True) -> int:
+        res = function.verify_email_sending(receiver_email, is_sign_up)
+        if res != -1:
+            return {"status": "success", "message": "Verification email sent", "output": res, "running": False}
+        return {"status": "error", "message": "Failed to send verification email", "output": -1, "running": False, "is_user": False}
 
 class UserManager:
     def __init__(self):
@@ -237,6 +243,7 @@ class FileManager:
         return {"status": "error", "message": "Failed to delete file.", "output": False, "running": False}
 
     def send_file_user(self, to_username, from_user):
+        
         from_user = function.load_user(from_user)
         if from_user and function.send_file_user(to_username, from_user):
              return {"status": "success", "message": "File sent.", "output": True, "running": False}

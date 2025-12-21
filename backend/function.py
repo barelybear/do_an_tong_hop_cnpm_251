@@ -13,6 +13,7 @@ import mimetypes
 from PIL import Image, ImageTk
 import io
 from firebase_admin import firestore
+import time
 MAX_IMAGE_W, MAX_IMAGE_H = 900, 500
 # ĐỪNG CHỈNH SỬA PHẦN NÀY NẾU KHÔNG CẦN THIẾT
 # Nếu chỉnh sửa thì bắt đầu bằng """update start""" và """update end"""
@@ -26,8 +27,10 @@ if not firebase_admin._apps:
 db = firestore.client()
 
 # ---------------- PCLOUD CONFIG ----------------
-PCLOUD_TOKEN = "wtFmxkZu6gP7ZBeQ9sxXiqAYF8bjH6N5Ep8SMb8Hk"  # use the 'auth' returned from /login
+PCLOUD_TOKEN = "xFteTZu6gP7Z6Gtj5GoqnEp3O2berH5iYuS4Yk1k"  # use the 'auth' returned from /login
 PCLOUD_FOLDER_ID = 0  # root folder
+PCLOUD_API_HOST = "api.pcloud.com" 
+
 # Initialize app with your service account key
 cred = credentials.Certificate(key_path)
 if not firebase_admin._apps:
@@ -92,10 +95,23 @@ def login(username_entry, password_entry):
     print("Username does not exist")
     return None
 
-def forget_password(gmail_entry):
+def forget_password(password_entry, gmail_entry):
     print("Forget Password Clicked")
-    # Implement forget password functionality here
-    
+    db_ref = firestore.client().collection('gmail').document(gmail_entry)
+    if not db_ref.get().exists:
+        print("Gmail does not exist")
+        return False
+    username = db_ref.get().to_dict().get('username')
+    user = load_user(username)
+    user.password = password_entry
+    hashed_password = bcrypt.hashpw(user.password.encode('utf-8'), bcrypt.gensalt())
+    user_ref = firestore.client().collection('users').document(username)
+    user_ref.update({
+        'password': hashed_password.decode('utf-8')
+    })
+    print("Password updated successfully")
+    return True
+        
 
 def sign_up(username_entry, password_entry, gmail_entry):
     print("Sign Up Clicked")
@@ -160,43 +176,61 @@ def detect_message_type(message):
     return "unknown"
 
 def upload_to_pcloud(file_path):
-    """Upload file to pCloud and return the public or direct link."""
+    """Upload file và trả về DIRECT LINK để hiển thị trên ứng dụng Chat."""
     try:
-        url = "https://api.pcloud.com/uploadfile"
+        # 1. Tạo tên mới: originalname_timestamp.ext
+        base_name = os.path.basename(file_path)
+        name, ext = os.path.splitext(base_name)
+        timestamp = int(time.time())
+        new_filename = f"{name}_{timestamp}{ext}"
+
+        upload_url = f"https://{PCLOUD_API_HOST}/uploadfile"
+
+        # 2. Upload file
         with open(file_path, "rb") as f:
-            files = {"file": f}
-            data = {"folderid": PCLOUD_FOLDER_ID, "auth": PCLOUD_TOKEN}
-            res = requests.post(url, files=files, data=data)
+            files = {"file": (new_filename, f)}
+            data = {
+                "folderid": PCLOUD_FOLDER_ID,
+                "auth": PCLOUD_TOKEN,
+                "nopartial": 1
+            }
+            res = requests.post(upload_url, files=files, data=data)
             res.raise_for_status()
             result = res.json()
 
-        print("UPLOAD RESULT:", result)
+        if result.get("result") != 0:
+            print("Upload error:", result)
+            return None
+
+        # Log debug thành công
+        print("UPLOAD SUCCESS. File ID:", result["metadata"][0]["fileid"])
         fileid = result["metadata"][0]["fileid"]
 
-        pub_res = requests.get(
-            "https://api.pcloud.com/createpublink",
-            params={"fileid": fileid, "auth": PCLOUD_TOKEN},
-        )
-        pub_res.raise_for_status()
-        pub_data = pub_res.json()
+        # 3. LẤY DIRECT LINK (Link trực tiếp cho Image/Video)
+        # Sử dụng GET thay vì POST để tránh lỗi 404 hoặc lỗi không tìm thấy phương thức
+        link_url = f"https://{PCLOUD_API_HOST}/getfilelink"
+        link_params = {
+            "fileid": fileid,
+            "auth": PCLOUD_TOKEN
+        }
+        
+        link_req = requests.get(link_url, params=link_params)
+        link_req.raise_for_status()
+        link_data = link_req.json()
 
-        # pCloud returns a unique code for the public link
-        if "code" in pub_data:
-            return f"https://u.pcloud.link/publink/show?code={pub_data['code']}"
+        if link_data.get("result") == 0:
+            # pCloud trả về hosts (danh sách server) và path
+            # Link trực tiếp = https://{host}{path}
+            direct_link = f"https://{link_data['hosts'][0]}{link_data['path']}"
+            return direct_link
         else:
-            # Fallback: use getfilelink for direct streaming link
-            link_req = requests.get(
-                "https://api.pcloud.com/getfilelink",
-                params={"fileid": fileid, "auth": PCLOUD_TOKEN},
-            )
-            link_req.raise_for_status()
-            link_data = link_req.json()
-            return f"https://{link_data['hosts'][0]}{link_data['path']}"
+            print("Failed to get link:", link_data)
+            return None
 
     except Exception as e:
-        #messagebox.showerror("Upload failed", str(e))
+        print("Upload failed:", e)
         return None
-
+    
 def open_image_popup(image_path):
     """Open a new window to show full-size image."""
     popup = tk.Toplevel()
@@ -311,7 +345,12 @@ def send_message_user(from_user, to_username, content):
         return False
 
 def send_file_user(to_username, from_user):
-    file_path = filedialog.askopenfilename()
+    root = tk.Tk()
+    root.withdraw()                 # Hide main window
+    root.attributes('-topmost', True)
+    root.update()                   # Apply focus
+
+    file_path = filedialog.askopenfilename(parent=root)
     if not file_path or not os.path.exists(file_path):
         print("File not selected or does not exist")
         return False
@@ -339,7 +378,6 @@ def send_file_user(to_username, from_user):
         chat_ref.collection('conversation').add(message_data)
         
         print("File sent")
-        notify_user(user=to_username, from_username=from_user.username)
         return True
     except Exception as e:
         print(f"An error occurred sending file: {e}")
@@ -440,7 +478,8 @@ def load_messages_user(to_username, from_user, limit=50):
                 'content': msg_data.get('content'),
                 # Format the timestamp for display (e.g., '10:30 AM')
                 'timestamp': fs_timestamp.strftime('%I:%M %p').lstrip('0'),
-                'isFile': msg_data.get('is_media', False)
+                'is_media': msg_data.get('is_media', False),
+                'media_type': msg_data.get('media_type', None)
             }
             json_messages.append(message_json)
         
@@ -1977,4 +2016,57 @@ def translate_message(messages, target_lang = 'vi'):
     translator = GoogleTranslator(source='auto', target=target_lang)
     translated_text = translator.translate(text=messages)
     return translated_text
+
+def verify_email_sending(receiver_email: str, is_sign_up = True) -> int:
+    import random
+    import smtplib
+    from email.message import EmailMessage
+    import ssl # Import the SSL module
+    import random
+    if is_sign_up:
+        db_ref = firestore.client().collection('gmail').document(receiver_email)
+        if db_ref.get().exists:
+            print("Email already exists in the system.")
+            return -2
+    else:
+        db_ref = firestore.client().collection('gmail').document(receiver_email)
+        if not db_ref.get().exists:
+            print("Email does not exist in the system.")
+            return -2
+    # --- Configuration ---
+    sender_email = "transchatteam@gmail.com"
+    # For security, store your password securely (e.g., environment variables)
+    # If using Gmail, this should be an App Password, not your regular password
+    password = "czgmxhfcavfanwml" 
+
+    # Create the email message object
+    res = random.randint(100000, 999999) # Return a random 6-digit code
+    msg = EmailMessage()
+    msg.set_content(f"This is the verification code for your verification: {res}.\n\nIf you did not request this, please ignore this email.\n\nBest regards,\nTransChat Dev Team")
+    msg['Subject'] = "Request to verify email from TransChat your code is " + str(res)
+    msg['From'] = sender_email
+    msg['To'] = receiver_email
+
+    # Define the SMTP server details for Gmail
+    smtp_server = "smtp.gmail.com"
+    port = 587 # Port 587 is typically used with TLS
+
+    # Create a secure SSL context
+    context = ssl.create_default_context()
+
+    try:
+        # Connect to the server and send the email
+        with smtplib.SMTP(smtp_server, port) as server:
+            server.starttls(context=context) # Secure the connection with TLS
+            server.login(sender_email, password) # Log in to the account
+            server.send_message(msg) # Send the message
+        print("Email sent successfully!")
+        return res
+    
+    except smtplib.SMTPAuthenticationError:
+        print("Authentication failed. Your email does not exist.")
+        return -1
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return -1
 

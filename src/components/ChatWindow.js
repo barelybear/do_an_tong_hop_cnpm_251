@@ -3,7 +3,6 @@ import '../styles/ChatWindow.css';
 import { apiCall, formatTimestamp } from '../utils/api';
 import { io } from 'socket.io-client';
 
-// Tạo một kết nối Socket.IO dùng chung cho toàn bộ file
 const socket = io('http://127.0.0.1:5000', {
   autoConnect: false,
 });
@@ -15,71 +14,45 @@ function ChatWindow({ selectedChat, onShowFriendOrGroupProfile, userLanguage = '
   const [contextMenu, setContextMenu] = useState(null);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [translatedMessages, setTranslatedMessages] = useState({});
-  // Cần thêm marker cho biết đây là group hay là user
-  // Tam thoi chua ap dung cho group
-  // Hàm load tin nhắn (dùng lại cho initial load + realtime qua socket)
+  const [videoToPlay, setVideoToPlay] = useState(null);
+
+  // --- HÀM XỬ LÝ HIỂN THỊ TÊN FILE ---
+  const getDisplayFileName = (url) => {
+    if (!url) return '';
+    const fileNameWithTimestamp = url.split('/').pop();
+    return fileNameWithTimestamp.replace(/_\d+(?=\.[^.]+$)/, '');
+  };
+
   const loadMessages = async () => {
     if (!selectedChat) {
       setMessages([]);
       return;
     }
-
     try {
-      const response = await apiCall('load_message_user', [selectedChat.name]);
-      console.log('Load messages response:', response); // Debug log
-      
+      const method = selectedChat.type === 'group' ? 'load_message_group' : 'load_message_user';
+      const response = await apiCall(method, [selectedChat.name]);
       if (response && response.status === 'success' && response.output) {
-        const result = response.output;
-        if (Array.isArray(result)) {
-          setMessages(result);
-        } else if (result && typeof result === 'object') {
-          setMessages([result]);
-        } else {
-          setMessages([]);
-        }
+        setMessages(Array.isArray(response.output) ? response.output : [response.output]);
       } else {
-        console.error('Failed to load messages:', response);
         setMessages([]);
       }
     } catch (error) {
-      console.error('Error loading messages:', error);
       setMessages([]);
     }
   };
 
-  // Initial load khi đổi selectedChat
   useEffect(() => {
     loadMessages();
   }, [selectedChat]);
 
-  // Lắng nghe Socket.IO để nhận tin nhắn realtime
   useEffect(() => {
-    if (!selectedChat || !currentUser || !currentUser.username) return;
-
-    if (!socket.connected) {
-      socket.connect();
-    }
-
+    if (!selectedChat || !currentUser?.username) return;
+    if (!socket.connected) socket.connect();
     const isGroup = selectedChat.type === 'group';
-    let room;
-    if (isGroup) {
-      room = selectedChat.name;
-    } else {
-      const users = [currentUser.username, selectedChat.name].sort();
-      room = `${users[0]}_${users[1]}`;
-    }
-
-    // Join room tương ứng với cuộc chat đang mở
+    let room = isGroup ? selectedChat.name : [currentUser.username, selectedChat.name].sort().join('_');
     socket.emit('join', { room });
-
-    const handleNewMessage = (data) => {
-      if (!data || data.room !== room) return;
-      // Khi có tin mới trong room này thì reload lại messages
-      loadMessages();
-    };
-
+    const handleNewMessage = (data) => { if (data?.room === room) loadMessages(); };
     socket.on('new_message', handleNewMessage);
-
     return () => {
       socket.off('new_message', handleNewMessage);
       socket.emit('leave', { room });
@@ -87,206 +60,107 @@ function ChatWindow({ selectedChat, onShowFriendOrGroupProfile, userLanguage = '
   }, [selectedChat, currentUser]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, [messages]);
 
   const handleSend = async (e) => {
     e.preventDefault();
     if (message.trim() && selectedChat) {
       const messageContent = message.trim();
-      const currentMessages = messages; // Save current messages
-      setMessage(''); // Clear input immediately for better UX
-      
-      // Optimistically add message to UI
-      const tempMessage = {
-        id: `temp-${Date.now()}`,
-        sender: 'Me',
-        senderId: 'me',
-        content: messageContent,
-        timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-        isFile: false
-      };
-      setMessages([...currentMessages, tempMessage]);
-      
+      setMessage('');
       try {
-        // Send message to backend
-        const res = await apiCall("send_message_user", [selectedChat.name, messageContent]);
-        console.log('Send message response:', res); // Debug log
-        
-        if (res && res.status === 'success') {
-          // Sau khi backend xử lý xong, Socket.IO sẽ bắn sự kiện new_message
-          // nên ở đây chỉ cần sync lại nếu muốn chắc chắn
-          const response = await apiCall('load_message_user', [selectedChat.name]);
-          if (response && response.status === 'success' && response.output) {
-            setMessages(response.output);
-          }
-        } else {
-          // If send failed, remove the optimistic message
-          setMessages(currentMessages);
-          setMessage(messageContent); // Restore message
-          console.error('Failed to send message:', res);
-        }
+        const method = selectedChat.type === 'group' ? "send_message_group" : "send_message_user";
+        await apiCall(method, [selectedChat.name, messageContent]);
       } catch (error) {
         console.error('Error sending message:', error);
-        // Remove optimistic message on error
-        setMessages(currentMessages);
-        setMessage(messageContent); // Restore message
       }
     }
   };
 
-  const handleFileSelect = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // Kiểm tra kích thước file
-      if (file.size > 4 * 1024 * 1024) {
-        alert('File gửi đi không được quá 4MB');
-        return;
+  // --- SỬA LẠI: GỌI THẲNG API KHI BẤM NÚT 📎 ---
+  const handleAttachClick = async () => {
+    if (!selectedChat) return;
+    try {
+      const method = selectedChat.type === 'group' ? 'send_file_group' : 'send_file_user';
+      // Gọi API - Backend sẽ tự mở cửa sổ chọn file
+      const res = await apiCall(method, [selectedChat.name]);
+      if (res.status !== 'success' && res.status !== 'cancel') {
+        alert('Gửi file thất bại: ' + (res.message || 'Lỗi không xác định'));
       }
-      // Mock upload file
-      const newMessage = {
-        id: messages.length + 1,
-        sender: 'Me',
-        senderId: 'me',
-        content: file.name,
-        timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-        isFile: true
-      };
-      setMessages([...messages, newMessage]);
+    } catch (error) {
+      alert('Lỗi kết nối khi gửi file');
     }
   };
 
-  // Handle click vào message content để hiện option dịch
-  const handleMessageClick = (e, msg) => {
+  const handleContextMenu = (e, msg) => {
     e.preventDefault();
-    e.stopPropagation();
-    if (msg.isFile) return; // Không dịch file
-    
     setSelectedMessage(msg);
-    setContextMenu({
-      x: e.clientX,
-      y: e.clientY
-    });
+    setContextMenu({ x: e.clientX, y: e.clientY });
   };
 
-  // Đóng context menu
   useEffect(() => {
-    const handleClick = () => {
-      setContextMenu(null);
-    };
-    if (contextMenu) {
-      document.addEventListener('click', handleClick);
-      return () => document.removeEventListener('click', handleClick);
-    }
-  }, [contextMenu]);
+    const closeMenu = () => setContextMenu(null);
+    window.addEventListener('click', closeMenu);
+    return () => window.removeEventListener('click', closeMenu);
+  }, []);
 
-  // Function dịch tin nhắn
   const translateMessage = async (msg) => {
     if (translatedMessages[msg.id]) {
-      // Nếu đã dịch, hiển thị lại bản gốc
-      const newTranslated = { ...translatedMessages };
-      delete newTranslated[msg.id];
-      setTranslatedMessages(newTranslated);
+      const newT = { ...translatedMessages };
+      delete newT[msg.id];
+      setTranslatedMessages(newT);
       setContextMenu(null);
       return;
     }
-
-    try {
-      // Gọi API backend để dịch
-      const data = await apiCall('translate_message', [msg.content, userLanguage]);
-      
-      if (data.status === 'success' && data.output) {
-        setTranslatedMessages({
-          ...translatedMessages,
-          [msg.id]: data.output
-        });
-      } else if (data.output) {
-        // If API returns original message (error case), use it
-        setTranslatedMessages({
-          ...translatedMessages,
-          [msg.id]: data.output
-        });
-      } else {
-        // If translation fails completely, keep original message
-        console.error('Translation failed, keeping original message');
-      }
-    } catch (error) {
-      console.error('Translation error:', error);
-      // On error, keep original message (don't use mock data)
+    const data = await apiCall('translate_message', [msg.content, userLanguage]);
+    if (data.status === 'success') {
+      setTranslatedMessages({ ...translatedMessages, [msg.id]: data.output });
     }
-    
     setContextMenu(null);
   };
 
   if (!selectedChat) {
-    return (
-      <div className="chat-window empty">
-        <div className="empty-state">
-          <h2>Chào mừng đến với Chat Desktop</h2>
-          <p>Chọn một cuộc trò chuyện để bắt đầu</p>
-        </div>
-      </div>
-    );
+    return <div className="chat-window empty"><div className="empty-state"><h2>Chào mừng đến với Chat Desktop</h2><p>Chọn một cuộc trò chuyện để bắt đầu</p></div></div>;
   }
 
   return (
     <div className="chat-window">
       <div className="chat-header">
         <div className="header-left">
-          <div className="chat-avatar">
-            <div className="avatar">{selectedChat.avatar}</div>
+          <div className="chat-avatar"><div className="avatar">{selectedChat.avatar}</div>
             {selectedChat.status && selectedChat.status !== 'hidden' && (
-              <span className={`status-indicator ${selectedChat.status === 'online' ? 'online' : selectedChat.status === 'busy' ? 'busy' : 'offline'}`}></span>
+              <span className={`status-indicator ${selectedChat.status === 'online' ? 'online' : 'offline'}`}></span>
             )}
           </div>
           <div className="chat-info">
             <h2 className="chat-name">{selectedChat.name}</h2>
             {selectedChat.status && selectedChat.status !== 'hidden' && (
-              <p className="chat-status">
-                {selectedChat.status === 'online' ? '🟢 Online' : 
-                 selectedChat.status === 'busy' ? '🔴 Bận' : 
-                 '⚫ Offline'}
-              </p>
+              <p className="chat-status">{selectedChat.status === 'online' ? '🟢 Online' : '⚫ Offline'}</p>
             )}
           </div>
         </div>
         <div className="header-actions">
-          <button className="icon-btn" title="Gọi thoại">📞</button>
-          <button className="icon-btn" title="Gọi video">📹</button>
-          <button 
-            className="icon-btn" 
-            onClick={() => selectedChat && onShowFriendOrGroupProfile && onShowFriendOrGroupProfile(selectedChat)} 
-            title="Thông tin"
-          >
-            ⋮
-          </button>
+          <button className="icon-btn" onClick={() => onShowFriendOrGroupProfile(selectedChat)}>⋮</button>
         </div>
       </div>
 
       <div className="messages-container">
         {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`message ${msg.senderId === 'me' ? 'sent' : 'received'}`}
-          >
-            {msg.senderId !== 'me' && (
-              <div className="message-avatar">
-                <div className="avatar small">{selectedChat.avatar}</div>
-              </div>
-            )}
+          <div key={msg.id} className={`message ${msg.senderId === 'me' || msg.sender === currentUser.username ? 'sent' : 'received'}`}>
             <div className="message-content">
-              <div 
-                className="message-bubble"
-                onClick={(e) => handleMessageClick(e, msg)}
-                style={{ cursor: msg.isFile ? 'default' : 'pointer' }}
-              >
-                {msg.isFile ? (
-                  <div className="file-message">
-                    <span>📎 {msg.content}</span>
+              <div className="message-bubble" onContextMenu={(e) => handleContextMenu(e, msg)}>
+                {msg.is_media ? (
+                  <div className="file-preview">
+                    {msg.media_type === 'image' ? (
+                      <img src={msg.content} alt="preview" className="msg-image" style={{ maxWidth: '280px', maxHeight: '200px', borderRadius: '8px', objectFit: 'contain' }} />
+                    ) : msg.media_type === 'video' ? (
+                      <div className="video-thumb" onClick={() => setVideoToPlay(msg.content)}>
+                        <video src={msg.content} className="msg-video-preview" style={{ maxWidth: '280px' }} />
+                        <div className="play-icon-overlay">▶</div>
+                      </div>
+                    ) : (
+                      <div className="generic-file"><span>📎 {getDisplayFileName(msg.content)}</span></div>
+                    )}
                   </div>
                 ) : (
                   <p>{translatedMessages[msg.id] || msg.content}</p>
@@ -299,51 +173,44 @@ function ChatWindow({ selectedChat, onShowFriendOrGroupProfile, userLanguage = '
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Context Menu */}
-      {contextMenu && selectedMessage && !selectedMessage.isFile && (
-        <div 
-          className="context-menu"
-          style={{
-            position: 'fixed',
-            left: `${contextMenu.x}px`,
-            top: `${contextMenu.y}px`,
-            zIndex: 1000,
-            backgroundColor: 'white',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-            padding: '4px 0',
-            minWidth: '120px'
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div 
-            className="context-menu-item"
-            onClick={() => translateMessage(selectedMessage)}
-            style={{
-              padding: '8px 16px',
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = '#f0f0f0'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
-          >
-            {translatedMessages[selectedMessage.id] ? '📖 Hiển thị bản gốc' : '🌐 Dịch'}
+      {videoToPlay && (
+        <div className="video-overlay" onClick={() => setVideoToPlay(null)}>
+          <div className="video-container" onClick={e => e.stopPropagation()}>
+            <video controls autoPlay className="full-video"><source src={videoToPlay} /></video>
+            <button className="close-video-btn" onClick={() => setVideoToPlay(null)}>✕</button>
+          </div>
+        </div>
+      )}
+
+      {contextMenu && selectedMessage && (
+        <div className="message-actions-frame" style={{ position: 'fixed', left: `${contextMenu.x}px`, top: `${contextMenu.y}px`, zIndex: 1000 }}>
+          <div className="actions-container" style={{ background: 'white', borderRadius: '8px', border: '1px solid #ccc', padding: '5px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
+            {selectedMessage.is_media ? (
+              <>
+                <button className="action-button" onClick={() => { window.open(selectedMessage.content, '_blank'); setContextMenu(null); }} style={{ display: 'block', width: '100%', padding: '8px', border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer' }}>
+                  📥 Tải về
+                </button>
+                {selectedMessage.media_type === 'video' && (
+                  <button className="action-button" onClick={() => { setVideoToPlay(selectedMessage.content); setContextMenu(null); }} style={{ display: 'block', width: '100%', padding: '8px', border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer' }}>
+                    ▶ Phát video
+                  </button>
+                )}
+              </>
+            ) : (
+              <button className="action-button" onClick={() => translateMessage(selectedMessage)} style={{ display: 'block', width: '100%', padding: '8px', border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer' }}>
+                {translatedMessages[selectedMessage.id] ? '📖 Hiện văn bản gốc' : '🌐 Dịch tin nhắn'}
+              </button>
+            )}
           </div>
         </div>
       )}
 
       <form className="message-input-container" onSubmit={handleSend}>
-        <button type="button" className="emoji-btn" title="Emoji">😊</button>
-        <label className="attach-btn" title="Đính kèm">
+        <button type="button" className="emoji-btn">😊</button>
+        {/* SỬA LẠI THÀNH BUTTON ĐỂ GỌI API TRỰC TIẾP */}
+        <button type="button" className="attach-btn" onClick={handleAttachClick} title="Gửi file">
           📎
-          <input
-            type="file"
-            accept="image/*,video/*"
-            onChange={handleFileSelect}
-            style={{ display: 'none' }}
-          />
-        </label>
+        </button>
         <input
           type="text"
           className="message-input"
@@ -351,9 +218,7 @@ function ChatWindow({ selectedChat, onShowFriendOrGroupProfile, userLanguage = '
           value={message}
           onChange={(e) => setMessage(e.target.value)}
         />
-        <button type="submit" className="send-btn" disabled={!message.trim()}>
-          ➤
-        </button>
+        <button type="submit" className="send-btn" disabled={!message.trim()}>➤</button>
       </form>
     </div>
   );
