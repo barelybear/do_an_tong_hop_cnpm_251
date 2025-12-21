@@ -204,6 +204,6 @@ chat/{chatId}
 
 ## License
 
-MIT
+MIT License
 
 
