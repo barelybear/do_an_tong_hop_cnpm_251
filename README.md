@@ -58,6 +58,9 @@ npm run dev
 npm start
 \`\`\`
 
+3. Trong terminal khác chạy api python:
+\`\`\`bash
+py backend\api.py
 ### Build production
 
 \`\`\`bash
