@@ -45,20 +45,9 @@
 \`\`\`bash
 npm install
 \`\`\`
-2. Cài key(tạo một file json như sau với tên trans-chat-key.json)
-{
-  "type": "service_account",
-  "project_id": "trans-chat-373cf",
-  "private_key_id": "2e63e6dd5ab371105207e19cd4b5c7f407e508d7",
-  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDSlzx3ubChSGhm\nOhEZUQQxhaD0x1beaUSBC6FWdv0W/UWA9jmC4DAVtxc6deIStdlEh8wYPfY/LETK\n26o/UZzl6mWB38quiJ0geDtdVOM8jO6OU8yM44JVHXEBiVtbw5TB/l/AuEC/mxIj\nthAvTT82BiPx0OU50DFVB0meK4WXRtQ7TWnVkNOHcMBRB5tY45Ln6e5wJ+mqB8Gg\nN2RQRiMmjRLLts1/Qu1Oee7Rt2VtaqxNRJP39vojaWe4u2l9Elfl56nncSk7m9E7\nS2b2od3+qK0YnwpBXlH0O/ZUoOh42PJlD5MqlntcgSkXCYsrVkTaTvYW4Vi0uQmX\nVv9icdv/AgMBAAECggEAVVgMHdsnnV0qTg+HQXLHV8h3b+vfJRiVNhUAB/oF3Iy8\n36Qpr4PqiMpgBAWlHn8K845zJHnr8zMeF/YI20tYYgbpp0YKLkxYHUIMkOjnhHD6\n9rw4P/qtpY/ebch8OUacYTgVFxW0y9Hs+oL8sSbFkL/RTl0hoJnifDqNV6f8pk7F\nwGVmq4wSaryEkmC9IMfYQg+sA2VL04bTczUrC1xy/u5KgwFISrq7FiDZKhDYsFVV\nXiiG+r+xdIET4aYTSYfVoNWG8PywRjiNScv9SzMb6a/l4Q69V72d26MjkrhNdZcw\nZzPxxvZqIkUYud8R5TUlA6ZZzsiGmDJ+cmfSWTaEyQKBgQD7yt4oGbdqwlr7QZRD\nFcYowf5MwDhbvgCtU7Miho8LWpU6/k4Tz5SZtBqX+IvCZGwkjRwmtlQxU6UHNJzS\nwVRYG9BuZ9XMHuXQQQH1uYD7hqvLZuHMkp8qqpISNBsUYtHcL6b0DVUqPCDNUgJQ\nNpxwYe3if4rl4RRePHHndJYApwKBgQDWHB0MH6a1uPl/ExJdVPsF9FH3H9Vr8ACN\n2Qxafx7/+cws3IKZAE3PlSYbP37DgGEh8kVNmGW05ChTtXclMpscONkURgOiDxQh\nfFvj125cFmDPgaVGcwBajv2Ci7xRv00+Cq+7Q922zvwU+TMqeJaWrt+DV2QfTNSI\nr3yWfX8c6QKBgQCog3Q9GED19U9YuuIUJ71wR6z/BuJxG+9uEQdhgva3HY+kZNAy\nWAnW+H+X1+MJXZY2vC3sBrjALn/TG7YdIwBk23Cag2nF66PYxbkfEGCvdckCHz/d\nXv+hWXjbL/4znZNgLpAo48dstcMqRsl/j50RZakEnmGCSioMi52bzx4ZHwKBgFyp\ngBy+Gf0tl7TaQSlpXNY/3bVQ7qGvFd5N4B3ORFFN/4Iu0Mp8qjA7gWlremYLyn3R\nhxLE8MdvstA/idfsZdq586DliC77zZ+MXYxmsNljyfQkTK4HmVCX77ku1oqee0Rt\nhY5LGcpDHC/LhcxMsgd2mT8TdD5jltus7wOGPpv5AoGBAOQWw3bMY09K+Wesc5p8\nk0VNZgHa8L20CTKfzAl3Rl8I79SiM5aO0EETCIh4nA0U+MCqui/6YfnaJ4b65rlw\nEwX5Sn08ep3ofgEAA/DXGqwmr1tXKruzxS1NRdtmerr21JuS92bhsz4Jz86du6Om\nXNNRoM3rzzbccmlmeh+StPpN\n-----END PRIVATE KEY-----\n",
-  "client_email": "firebase-adminsdk-fbsvc@trans-chat-373cf.iam.gserviceaccount.com",
-  "client_id": "113665527059340126977",
-  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-  "token_uri": "https://oauth2.googleapis.com/token",
-  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40trans-chat-373cf.iam.gserviceaccount.com",
-  "universe_domain": "googleapis.com"
-}
+2. Cài key từ đường link này vào thư mục gốc:
+https://u.pcloud.link/publink/show?code=XZWvmx5ZXj1N5g1cEOFAJlA9Ky8cRRnjdskk
+
 
 ### Chạy ứng dụng
 
